@@ -1,57 +1,65 @@
 type Props = {
-  match: string
+  homeTeam: string
+  awayTeam: string
   signal: string
-  confidence: string
+  confidence: number
   odds: string
+  homeRating?: number
+  awayRating?: number
 }
 
 export default function SignalCard({
-  match,
+  homeTeam,
+  awayTeam,
   signal,
   confidence,
   odds,
+  homeRating,
+  awayRating,
 }: Props) {
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 className="text-2xl font-semibold">
-        {match}
+    <div className="bg-slate-800 rounded-2xl p-6 mb-6 shadow-lg">
+      <h2 className="text-2xl font-bold mb-4">
+        {homeTeam} vs {awayTeam}
       </h2>
 
-      <div className="mt-4 flex gap-6">
+      <div className="grid grid-cols-5 gap-4">
         <div>
-          <p className="text-zinc-400 text-sm">
-            Signal
-          </p>
+          <p className="text-slate-400 text-sm">Signal</p>
 
           <p
-            className={
-              signal === "BUY"
-                ? "text-green-400 text-xl font-bold"
-                : "text-red-400 text-xl font-bold"
-            }
+            className={`font-bold ${
+              signal === "STRONG BUY"
+                ? "text-green-400"
+                : signal === "BUY"
+                ? "text-green-300"
+                : signal === "WATCH"
+                ? "text-yellow-300"
+                : "text-red-400"
+            }`}
           >
             {signal}
           </p>
         </div>
 
         <div>
-          <p className="text-zinc-400 text-sm">
-            Confidence
-          </p>
-
-          <p className="text-xl">
-            {confidence}
-          </p>
+          <p className="text-slate-400 text-sm">Confidence</p>
+          <p>{confidence}%</p>
         </div>
 
         <div>
-          <p className="text-zinc-400 text-sm">
-            Odds
-          </p>
+          <p className="text-slate-400 text-sm">Odds</p>
+          <p>{odds}</p>
+        </div>
 
-          <p className="text-xl">
-            {odds}
-          </p>
+        <div>
+          <p className="text-slate-400 text-sm">Home Rating</p>
+          <p>{homeRating ?? "-"}</p>
+        </div>
+
+        <div>
+          <p className="text-slate-400 text-sm">Away Rating</p>
+          <p>{awayRating ?? "-"}</p>
         </div>
       </div>
     </div>
