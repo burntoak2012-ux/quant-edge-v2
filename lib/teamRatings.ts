@@ -1,0 +1,23 @@
+export const teamRatings: Record<string, number> = {
+  "Oakland Roots": 82,
+  "Colorado Springs": 74,
+
+  "Inter Miami": 92,
+  "Los Angeles FC": 90,
+  "Seattle Sounders": 88,
+  "FC Cincinnati": 89,
+  "Columbus Crew": 88,
+  "Philadelphia Union": 87,
+  "New York City FC": 86,
+  "Houston Dynamo": 85,
+  "Nashville SC": 84,
+  "Austin FC": 83,
+  "Orlando City": 84,
+  "New York Red Bulls": 85,
+  "Charlotte FC": 82,
+  "Atlanta United": 83,
+  "Chicago Fire": 78,
+  "Toronto FC": 77,
+  "CF Montreal": 76,
+  "D.C. United": 79,
+}

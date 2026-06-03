@@ -1,34 +1,33 @@
-import { calculateTeamRating } from "./ratingModel"
-
-export function generateSignalFromLineups(
-  homeLineup: any[],
-  awayLineup: any[]
+export function generateSignal(
+  homeRating: number,
+  awayRating: number
 ) {
-  const homeRating = calculateTeamRating(homeLineup)
-  const awayRating = calculateTeamRating(awayLineup)
-
   const difference = homeRating - awayRating
+  const absDifference = Math.abs(difference)
 
+  // Ignore tiny edges
+  if (absDifference < 2) {
+    return {
+      signal: "PASS",
+      confidence: 50,
+    }
+  }
+
+  // Confidence based on rating gap
   const confidence = Math.min(
-    Math.max(50 + difference * 3, 5),
-    95
+    95,
+    Math.round(55 + absDifference * 5)
   )
 
-  let signal = "AVOID"
-
-  if (confidence >= 80) {
-    signal = "STRONG BUY"
-  } else if (confidence >= 70) {
-    signal = "BUY"
-  } else if (confidence >= 60) {
-    signal = "WATCH"
+  if (difference > 0) {
+    return {
+      signal: "HOME WIN",
+      confidence,
+    }
   }
 
   return {
-    signal,
-    confidence: `${confidence}%`,
-    odds: (100 / confidence).toFixed(2),
-    homeRating,
-    awayRating,
+    signal: "AWAY WIN",
+    confidence,
   }
 }
