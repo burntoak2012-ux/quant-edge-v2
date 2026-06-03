@@ -14,7 +14,7 @@ export async function GET() {
     const today = new Date().toISOString().split("T")[0]
 
     const res = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${today}`,
+      `https://v3.football.api-sports.io/fixtures?date=${today}&status=NS`,
       {
         headers: {
           "x-apisports-key": API_KEY || "",
@@ -29,7 +29,7 @@ export async function GET() {
     console.log("FIXTURES COUNT:", fixtures.length)
 
     const matches = await Promise.all(
-      fixtures.slice(0, 2).map(async (item: any, index: number) => {
+      fixtures.slice(0, 20).map(async (item: any, index: number) => {
         const fixtureId = item.fixture.id
         const useTeamStats = index === 0
 
