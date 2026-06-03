@@ -1,4 +1,9 @@
-import type { Player } from "./ratingModel"
+type Player = {
+  name: string
+  soccerWikiRating: number
+  position: string
+  starts: boolean
+}
 
 export const arsenalLineup: Player[] = [
   { name: "Goalkeeper", soccerWikiRating: 87, position: "GK", starts: true },

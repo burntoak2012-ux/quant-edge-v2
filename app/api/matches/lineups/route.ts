@@ -36,12 +36,11 @@ export async function GET(request: Request) {
       const rating = calculateLineupRating(lineup.startXI)
 
       return {
-        team: lineup.team?.name,
-        formation: lineup.formation,
-        totalRating: rating.total,
-        averageRating: rating.average,
-        players: rating.players,
-      }
+  team: lineup.team?.name,
+  formation: lineup.formation,
+  averageRating: rating.average,
+  players: rating.players,
+}
     })
 
     return NextResponse.json({
