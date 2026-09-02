@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server"
 import { fetchLineups } from "@/lib/fetchLineups"
 import { calculateLineupRating } from "@/lib/calculateLineupRating"
+import { computeCombinedLineupTotals, type ApiLineup } from "@/lib/lineupUtils"
+import { requireActiveSubscription } from "@/lib/requireSubscription"
 
 export async function GET(request: Request) {
   try {
+    const access = await requireActiveSubscription()
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status })
+
     const { searchParams } = new URL(request.url)
 
     const fixtureId = searchParams.get("fixtureId")
@@ -32,15 +37,19 @@ export async function GET(request: Request) {
       })
     }
 
-    const ratedLineups = lineups.map((lineup: any) => {
-      const rating = calculateLineupRating(lineup.startXI)
+    // Compute per-team totals (using Soccerwiki ratings when available)
+    const combined = await computeCombinedLineupTotals(lineups)
+
+    // Also include the per-lineup breakdown using existing rating calculation for compatibility
+    const ratedLineups = lineups.map((lineup: ApiLineup) => {
+      const rating = calculateLineupRating(lineup.startXI || [])
 
       return {
-  team: lineup.team?.name,
-  formation: lineup.formation,
-  averageRating: rating.average,
-  players: rating.players,
-}
+        team: lineup.team?.name,
+        formation: lineup.formation,
+        averageRating: rating.average,
+        players: rating.players,
+      }
     })
 
     return NextResponse.json({
@@ -48,6 +57,7 @@ export async function GET(request: Request) {
       count: ratedLineups.length,
       hasLineups: true,
       lineups: ratedLineups,
+      combinedLineupTotals: combined,
     })
   } catch (error) {
     console.error(error)

@@ -6,7 +6,7 @@ export function generateSignal(
   const absDifference = Math.abs(difference)
 
   // Ignore tiny edges
-  if (absDifference < 2) {
+  if (absDifference < 5) {
     return {
       signal: "PASS",
       confidence: 50,

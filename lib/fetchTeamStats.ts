@@ -8,6 +8,12 @@ export async function fetchTeamStats(
   season: number
 ) {
   try {
+    console.log("FETCH TEAM STATS REQUEST", {
+      teamId,
+      leagueId,
+      season,
+    })
+
     const response = await axios.get(
       "https://v3.football.api-sports.io/teams/statistics",
       {
@@ -22,15 +28,29 @@ export async function fetchTeamStats(
       }
     )
 
-console.log(
-  "TEAM STATS RAW",
-  teamId,
-  JSON.stringify(response.data, null, 2)
-)
+    const stats = response.data.response
 
-    return response.data.response
+    console.log("FETCH TEAM STATS RESULT", {
+      teamId,
+      leagueId,
+      season,
+      team: stats?.team?.name,
+      played: stats?.fixtures?.played?.total,
+      wins: stats?.fixtures?.wins?.total,
+      draws: stats?.fixtures?.draws?.total,
+      losses: stats?.fixtures?.loses?.total,
+      errors: response.data.errors,
+    })
+
+    return stats
   } catch (error) {
-    console.error("TEAM STATS ERROR", error)
+    console.error("TEAM STATS ERROR", {
+      teamId,
+      leagueId,
+      season,
+      error,
+    })
+
     return null
   }
 }

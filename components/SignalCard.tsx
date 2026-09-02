@@ -8,6 +8,7 @@ type Props = {
   odds: string
   homeRating: number
   awayRating: number
+  combinedLineupTotal?: number
 }
 
 export default function SignalCard({
@@ -18,6 +19,7 @@ export default function SignalCard({
   odds,
   homeRating,
   awayRating,
+  combinedLineupTotal,
 }: Props) {
   const signalColor =
     signal === "HOME WIN"
@@ -36,17 +38,22 @@ export default function SignalCard({
       : "text-orange-400"
 
   return (
-    <div className="bg-blue-900 rounded-xl p-6 shadow-lg border border-blue-700">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/20">
       <h2 className="text-2xl font-bold mb-5">
         {homeTeam} vs {awayTeam}
       </h2>
 
-      <div className="grid grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-7">
         <div>
           <p className="text-gray-400 text-xs">Signal</p>
           <p className={`font-bold ${signalColor}`}>
             {signal}
           </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-500">Lineup total</p>
+          <p>{combinedLineupTotal ?? "Pending"}</p>
         </div>
 
         <div>
