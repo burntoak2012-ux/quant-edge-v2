@@ -10,7 +10,12 @@ export default function AccountPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Quant Edge</p>
             <h1 className="mt-3 text-3xl font-bold">Your account</h1>
           </div>
-          <UserButton />
+          <div className="flex items-center gap-3">
+            <Link className="rounded-lg border border-cyan-400/50 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-400/10" href="/pricing">
+              Plans
+            </Link>
+            <UserButton />
+          </div>
         </div>
         <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-sm text-slate-400">Subscription</p>

@@ -66,6 +66,9 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-3">
+              <Link className="rounded-lg border border-cyan-400/50 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-400/10" href="/pricing">
+                Plans
+              </Link>
               <Link className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-cyan-400 hover:text-white" href="/account">
                 Account
               </Link>
