@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url })
   } catch (error) {
     console.error("Create session error:", error)
-    return NextResponse.json({ error: "Failed to create session" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Unknown Stripe error"
+    return NextResponse.json({ error: `Stripe checkout failed: ${message}` }, { status: 500 })
   }
 }
