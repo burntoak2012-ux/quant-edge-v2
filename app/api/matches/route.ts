@@ -189,8 +189,9 @@ const statsSeason =
     return NextResponse.json(matches)
   } catch (error) {
     console.error("MATCHES API ERROR:", error)
+    const message = error instanceof Error ? error.message : "Unknown matches error"
     return NextResponse.json(
-      { error: "Failed to fetch matches" },
+      { error: `Failed to fetch matches: ${message}` },
       { status: 500 }
     )
   }
