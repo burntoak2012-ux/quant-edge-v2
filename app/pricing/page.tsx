@@ -15,11 +15,19 @@ export default function PricingPage() {
         body: JSON.stringify({}),
       })
 
-      const json = await res.json()
+      const responseText = await res.text()
+      let json: { url?: string; error?: string } = {}
+
+      try {
+        json = JSON.parse(responseText)
+      } catch {
+        json.error = responseText || `Server returned HTTP ${res.status}`
+      }
+
       if (json.url) {
         window.location.href = json.url
       } else {
-        alert(json.error || "Failed to create checkout session")
+        alert(json.error || `Failed to create checkout session (HTTP ${res.status})`)
       }
     } catch (e) {
       console.error(e)
