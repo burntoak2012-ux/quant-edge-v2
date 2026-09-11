@@ -31,7 +31,10 @@ export default function Dashboard() {
 
     try {
       const res = await fetch("/api/matches", { cache: "no-store" })
-      const data = await res.json()
+      const contentType = res.headers.get("content-type") || ""
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : { error: `Server returned HTTP ${res.status}` }
 
       if (!res.ok || !Array.isArray(data)) {
         throw new Error(data.error || "Match data is unavailable")
@@ -101,7 +104,7 @@ export default function Dashboard() {
         </div>
 
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">Loading today&apos;s fixtures...</div>}
-        {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Data unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><button className="mt-5 rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div>}
+        {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
         {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">No fixtures available today</p><p className="mt-2 text-sm text-slate-400">Check back before kickoff when lineups and player ratings become available.</p></div>}
         {!loading && !error && matches.length > 0 && <div className="grid gap-5">{matches.map((match) => <SignalCard key={match.fixtureId} {...match} combinedLineupTotal={match.combinedLineupTotals?.combinedTotal} />)}</div>}
       </div>
