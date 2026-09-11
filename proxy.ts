@@ -12,5 +12,10 @@ export default clerkMiddleware(async (auth, req) => {
 })
 
 export const config = {
-  matcher: ["/app/:path*", "/account/:path*", "/api/secure/:path*"],
+  matcher: [
+    "/app/:path*",
+    "/account/:path*",
+    "/api/secure/:path*",
+    "/api/stripe/create-session",
+  ],
 }
