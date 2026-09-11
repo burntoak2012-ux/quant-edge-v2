@@ -10,7 +10,14 @@ export async function POST(req: Request) {
   try {
     const { userId } = await auth()
     const priceId = process.env.STRIPE_PRICE_ID
-    const appUrl = new URL(req.url).origin
+    const requestUrl = new URL(req.url)
+    const forwardedHost = req.headers.get("x-forwarded-host")
+    const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim()
+    const appUrl = forwardedHost
+      ? `https://${forwardedHost}`
+      : forwardedProto === "https"
+        ? `https://${requestUrl.host}`
+        : requestUrl.origin
 
     if (!userId) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 })
