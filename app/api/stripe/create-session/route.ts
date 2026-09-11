@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   try {
     const { userId } = await auth()
     const priceId = process.env.STRIPE_PRICE_ID
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+    const appUrl = new URL(req.url).origin
 
     if (!userId) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 })
