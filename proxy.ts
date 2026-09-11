@@ -16,6 +16,7 @@ export const config = {
     "/app/:path*",
     "/account/:path*",
     "/api/secure/:path*",
+    "/api/matches",
     "/api/stripe/create-session",
   ],
 }
