@@ -6,6 +6,10 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-05-27.dahlia" })
   : null
 
+function toIsoTimestamp(value: number | null | undefined) {
+  return value ? new Date(value * 1000).toISOString() : null
+}
+
 export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature")
   const body = await req.text()
@@ -52,8 +56,8 @@ export async function POST(req: Request) {
             customer: String(subscription.customer),
             status: subscription.status,
             price: subscription.items.data[0]?.price.id || null,
-            current_period_start: new Date(subscription.items.data[0]?.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.items.data[0]?.current_period_end * 1000).toISOString(),
+            current_period_start: toIsoTimestamp(subscription.items.data[0]?.current_period_start),
+            current_period_end: toIsoTimestamp(subscription.items.data[0]?.current_period_end),
             cancel_at_period_end: subscription.cancel_at_period_end,
             updated_at: new Date().toISOString(),
           })
@@ -68,7 +72,10 @@ export async function POST(req: Request) {
       case "customer.subscription.paused": {
         const sub = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.user_id
-        if (!userId) throw new Error("Subscription is missing user identity")
+        if (!userId) {
+          console.warn("Ignoring subscription event without user metadata", event.id)
+          break
+        }
         const result = await supabase.from("subscriptions").upsert({
           id: sub.id,
           user_id: userId,
@@ -94,6 +101,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true })
   } catch (err) {
     console.error("Stripe webhook error:", err)
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
+    const message = err instanceof Error ? err.message : "Unknown webhook error"
+    return NextResponse.json({ error: `Webhook processing failed: ${message}` }, { status: 500 })
   }
 }
