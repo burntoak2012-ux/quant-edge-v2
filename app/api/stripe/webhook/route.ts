@@ -101,7 +101,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true })
   } catch (err) {
     console.error("Stripe webhook error:", err)
-    const message = err instanceof Error ? err.message : "Unknown webhook error"
+    const webhookError = err as { message?: string; code?: string; details?: string; hint?: string }
+    const message = err instanceof Error
+      ? err.message
+      : [webhookError.message, webhookError.code, webhookError.details, webhookError.hint]
+        .filter(Boolean)
+        .join(" | ") || "Unknown webhook error"
     return NextResponse.json({ error: `Webhook processing failed: ${message}` }, { status: 500 })
   }
 }
