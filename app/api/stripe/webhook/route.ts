@@ -6,10 +6,6 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-05-27.dahlia" })
   : null
 
-function toIsoTimestamp(value: number | null | undefined) {
-  return value ? new Date(value * 1000).toISOString() : null
-}
-
 export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature")
   const body = await req.text()
@@ -48,21 +44,6 @@ export async function POST(req: Request) {
         )
         if (customerResult.error) throw customerResult.error
 
-        if (session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
-          const result = await supabase.from("subscriptions").upsert({
-            id: subscription.id,
-            user_id: userId,
-            customer: String(subscription.customer),
-            status: subscription.status,
-            price: subscription.items.data[0]?.price.id || null,
-            current_period_start: toIsoTimestamp(subscription.items.data[0]?.current_period_start),
-            current_period_end: toIsoTimestamp(subscription.items.data[0]?.current_period_end),
-            cancel_at_period_end: subscription.cancel_at_period_end,
-            updated_at: new Date().toISOString(),
-          })
-          if (result.error) throw result.error
-        }
         break
       }
 
