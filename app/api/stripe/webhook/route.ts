@@ -33,15 +33,22 @@ export async function POST(req: Request) {
           throw new Error("Checkout session is missing user identity")
         }
 
-        const customerResult = await supabase.from("customers").upsert(
-          {
-            user_id: userId,
-            stripe_customer_id: session.customer,
-            checkout_session_id: session.id,
-            metadata: session.metadata || {},
-          },
-          { onConflict: "stripe_customer_id" }
-        )
+        const customerRecord = {
+          user_id: userId,
+          stripe_customer_id: String(session.customer),
+          checkout_session_id: session.id,
+          metadata: session.metadata || {},
+        }
+        const existingCustomer = await supabase
+          .from("customers")
+          .select("id")
+          .eq("stripe_customer_id", String(session.customer))
+          .maybeSingle()
+        if (existingCustomer.error) throw existingCustomer.error
+
+        const customerResult = existingCustomer.data
+          ? await supabase.from("customers").update(customerRecord).eq("id", existingCustomer.data.id)
+          : await supabase.from("customers").insert(customerRecord)
         if (customerResult.error) throw customerResult.error
 
         break
