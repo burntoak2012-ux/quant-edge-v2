@@ -55,11 +55,12 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    void loadMatches()
+    const interval = window.setInterval(() => {
       void loadMatches()
-    }, 0)
+    }, 60_000)
 
-    return () => window.clearTimeout(timer)
+    return () => window.clearInterval(interval)
   }, [])
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
