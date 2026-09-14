@@ -3,6 +3,8 @@ import { generateSignal } from "@/lib/generateSignal"
 import { teamRatings } from "@/lib/teamRatings"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 
+export const dynamic = "force-dynamic"
+
 const API_KEY = process.env.API_FOOTBALL_KEY
 const TARGET_LEAGUE_IDS = new Set([
   39,  // Premier League
@@ -48,6 +50,7 @@ export async function GET() {
         headers: {
           "x-apisports-key": API_KEY || "",
         },
+        cache: "no-store",
       }
     )
 
@@ -101,7 +104,9 @@ console.log("API ERRORS:", data.errors)
       })
     )
 
-    return NextResponse.json(matches)
+    return NextResponse.json(matches, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    })
   } catch (error) {
     console.error("MATCHES API ERROR:", error)
     const message = error instanceof Error ? error.message : "Unknown matches error"
