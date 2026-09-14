@@ -76,7 +76,12 @@ console.log("API ERRORS:", data.errors)
       TARGET_LEAGUE_IDS.has(Number(item.league?.id))
     )
 
-    console.log("FIXTURES COUNT:", fixtures.length)
+    console.log("Fixture selection", {
+      date: today,
+      providerFixtures: data.response?.length || 0,
+      qualifyingFixtures: fixtures.length,
+      qualifyingLeagueIds: fixtures.map((item: Fixture) => item.league.id),
+    })
 
     const matches = await Promise.all(
       fixtures.slice(0, MAX_FIXTURES).map(async (item: Fixture) => {
