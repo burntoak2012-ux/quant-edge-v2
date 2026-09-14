@@ -11,7 +11,9 @@ type Match = {
   awayTeam: string
   signal: string
   confidence: number
-  odds: string
+  odds: string | null
+  valuePercent: number | null
+  valueLabel: string
   homeRating: number
   awayRating: number
   hasLineups: boolean
@@ -24,6 +26,7 @@ export default function Dashboard() {
   const [updatedAt, setUpdatedAt] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
 
   async function loadMatches() {
     setLoading(true)
@@ -58,6 +61,13 @@ export default function Dashboard() {
     return () => window.clearTimeout(timer)
   }, [])
 
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const visibleMatches = normalizedQuery
+    ? matches.filter((match) =>
+        `${match.homeTeam} ${match.awayTeam}`.toLowerCase().includes(normalizedQuery)
+      )
+    : matches
+
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-6xl">
@@ -79,14 +89,14 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Signal</p>
               <p className="mt-2 text-xl font-semibold text-cyan-300">Live</p>
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Focus</p>
-              <p className="mt-2 text-xl font-semibold text-white">{matches.length || 0} fixtures</p>
+              <p className="mt-2 text-xl font-semibold text-white">{visibleMatches.length || 0} fixtures</p>
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Welcome</p>
@@ -97,16 +107,29 @@ export default function Dashboard() {
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
           <span>{updatedAt ? `Updated ${updatedAt}` : "Fetching today&apos;s fixtures"}</span>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
+            <label className="flex w-full items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-300 focus-within:border-cyan-400 sm:w-80">
+              <span className="sr-only">Search fixtures</span>
+              <input
+                className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search fixtures"
+                type="search"
+                value={searchQuery}
+              />
+            </label>
+            <div className="flex items-center gap-2">
             <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
             <span>Live model feed</span>
+            </div>
           </div>
         </div>
 
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">Loading today&apos;s fixtures...</div>}
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
         {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">No fixtures available today</p><p className="mt-2 text-sm text-slate-400">Check back before kickoff when lineups and player ratings become available.</p></div>}
-        {!loading && !error && matches.length > 0 && <div className="grid gap-5">{matches.map((match) => <SignalCard key={match.fixtureId} {...match} combinedLineupTotal={match.combinedLineupTotals?.combinedTotal} />)}</div>}
+        {!loading && !error && matches.length > 0 && visibleMatches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">No matching fixtures</p><p className="mt-2 text-sm text-slate-400">Try a different team name.</p></div>}
+        {!loading && !error && visibleMatches.length > 0 && <div className="grid gap-5">{visibleMatches.map((match) => <SignalCard key={match.fixtureId} {...match} combinedLineupTotal={match.combinedLineupTotals?.combinedTotal} />)}</div>}
       </div>
     </main>
   )

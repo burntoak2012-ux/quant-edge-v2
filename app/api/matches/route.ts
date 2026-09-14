@@ -3,6 +3,7 @@ import { fetchLineups } from "@/lib/fetchLineups"
 import { fetchTeamStats } from "@/lib/fetchTeamStats"
 import { calculateTeamRating } from "@/lib/calculateTeamRating"
 import { generateSignal } from "@/lib/generateSignal"
+import { fetchMatchOdds } from "@/lib/fetchMatchOdds"
 import { teamRatings } from "@/lib/teamRatings"
 import { computeCombinedLineupTotals } from "@/lib/lineupUtils"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
@@ -170,6 +171,17 @@ const statsSeason =
         }
 
         const signalResult = generateSignal(homeRating, awayRating)
+        const matchOdds = await fetchMatchOdds(fixtureId)
+        const selectedOdds = signalResult.signal === "HOME WIN"
+          ? matchOdds?.home
+          : signalResult.signal === "AWAY WIN"
+            ? matchOdds?.away
+            : null
+        const modelProbability = signalResult.confidence / 100
+        const impliedProbability = selectedOdds ? 1 / selectedOdds : null
+        const valuePercent = impliedProbability
+          ? Math.round((modelProbability - impliedProbability) * 100)
+          : null
 
         return {
           fixtureId,
@@ -177,7 +189,15 @@ const statsSeason =
           awayTeam: item.teams.away.name,
           signal: signalResult.signal,
           confidence: signalResult.confidence,
-          odds: "1.95",
+          odds: selectedOdds ? selectedOdds.toFixed(2) : null,
+          valuePercent,
+          valueLabel: valuePercent === null
+            ? "Unavailable"
+            : valuePercent >= 5
+              ? "Potential value"
+              : valuePercent <= -5
+                ? "Potentially overpriced"
+                : "Fairly priced",
           homeRating,
           awayRating,
           hasLineups: lineups.length > 0,
