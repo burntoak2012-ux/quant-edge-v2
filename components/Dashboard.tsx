@@ -7,6 +7,7 @@ import SignalCard from "@/components/SignalCard"
 
 type Match = {
   fixtureId: number
+  leagueName: string
   homeTeam: string
   awayTeam: string
   signal: string

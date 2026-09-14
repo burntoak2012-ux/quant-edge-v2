@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 type Props = {
+  leagueName: string
   homeTeam: string
   awayTeam: string
   signal: string
@@ -16,6 +17,7 @@ type Props = {
 }
 
 export default function SignalCard({
+  leagueName,
   homeTeam,
   awayTeam,
   signal,
@@ -47,9 +49,10 @@ export default function SignalCard({
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/20">
       <div className="mb-5 flex items-start justify-between gap-4">
-        <h2 className="text-2xl font-bold">
-          {homeTeam} vs {awayTeam}
-        </h2>
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{leagueName}</p>
+          <h2 className="text-2xl font-bold">{homeTeam} vs {awayTeam}</h2>
+        </div>
         <button
           aria-expanded={showHelp}
           aria-label="Explain dashboard values"

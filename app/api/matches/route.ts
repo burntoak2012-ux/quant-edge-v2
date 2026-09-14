@@ -10,6 +10,20 @@ import { requireActiveSubscription } from "@/lib/requireSubscription"
 
 const API_KEY = process.env.API_FOOTBALL_KEY
 const TEST_STATS_SEASON = 2024
+const TARGET_LEAGUE_IDS = new Set([
+  39,  // Premier League
+  140, // La Liga
+  78,  // Bundesliga
+  135, // Serie A
+  61,  // Ligue 1
+  2,   // UEFA Champions League
+  3,   // UEFA Europa League
+  848, // UEFA Europa Conference League
+])
+const configuredFixtureLimit = Number.parseInt(process.env.MATCH_LIMIT || "10", 10)
+const MAX_FIXTURES = Number.isFinite(configuredFixtureLimit) && configuredFixtureLimit > 0
+  ? Math.min(configuredFixtureLimit, 20)
+  : 10
 
 type Fixture = {
   fixture: { id: number; date?: string }
@@ -61,12 +75,14 @@ console.log("API ERRORS:", data.errors)
       )
     }
 
-    const fixtures = data.response || []
+    const fixtures = (data.response || []).filter((item: Fixture) =>
+      TARGET_LEAGUE_IDS.has(Number(item.league?.id))
+    )
 
     console.log("FIXTURES COUNT:", fixtures.length)
 
     const matches = await Promise.all(
-      fixtures.slice(0, 2).map(async (item: Fixture) => {
+      fixtures.slice(0, MAX_FIXTURES).map(async (item: Fixture) => {
         const fixtureId = item.fixture.id
         const useTeamStats = true
         const rawSeason = item.league.season || TEST_STATS_SEASON
@@ -185,6 +201,7 @@ const statsSeason =
 
         return {
           fixtureId,
+          leagueName: item.league.name || "European competition",
           homeTeam: item.teams.home.name,
           awayTeam: item.teams.away.name,
           signal: signalResult.signal,
