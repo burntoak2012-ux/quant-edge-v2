@@ -28,7 +28,9 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
-        const userId = session.metadata?.user_id || session.client_reference_id
+        const userId = session.metadata?.user_id
+          || session.metadata?.clerkUserId
+          || session.client_reference_id
         if (!userId || !session.customer) {
           throw new Error("Checkout session is missing user identity")
         }
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
       case "customer.subscription.deleted":
       case "customer.subscription.paused": {
         const sub = event.data.object as Stripe.Subscription
-        const userId = sub.metadata?.user_id
+        const userId = sub.metadata?.user_id || sub.metadata?.clerkUserId
         if (!userId) {
           console.warn("Ignoring subscription event without user metadata", event.id)
           break

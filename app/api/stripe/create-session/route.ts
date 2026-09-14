@@ -34,9 +34,9 @@ export async function POST(req: Request) {
       success_url: `${appUrl}/account?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing`,
       client_reference_id: userId,
-      metadata: { user_id: userId },
+      metadata: { user_id: userId, clerkUserId: userId },
       subscription_data: {
-        metadata: { user_id: userId },
+        metadata: { user_id: userId, clerkUserId: userId },
       },
     })
 
