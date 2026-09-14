@@ -1,4 +1,5 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
+import { NextResponse } from "next/server"
 
 const PROTECTED_PREFIXES = ["/app", "/account", "/api/secure"]
 
@@ -7,7 +8,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   if (PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     const { userId } = await auth()
-    if (!userId) return Response.redirect(new URL("/sign-in", req.url))
+    if (!userId) return NextResponse.redirect(new URL("/sign-in", req.url))
   }
 })
 
