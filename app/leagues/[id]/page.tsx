@@ -94,7 +94,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
 
   const leaderboardCards = leaderboardTypes.map(([title], index) => ({
     title,
-    entries: leaderboardResults[index]?.data.response?.slice(0, 10) || [],
+    entries: Array.isArray(leaderboardResults[index]?.data.response) ? leaderboardResults[index]?.data.response?.slice(0, 10) || [] : [],
   }))
 
   return (
@@ -178,6 +178,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
         <section className="mt-10 border-t border-slate-800 pt-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Leaderboards</p>
           <h2 className="mt-2 text-2xl font-bold">Season leaders</h2>
+          <p className="mt-2 text-sm text-slate-400">Goals, assists, and discipline leaders from the {displayedSeason} data set.</p>
           <div className="mt-5 grid gap-5 lg:grid-cols-3">
             {leaderboardCards.map((board) => (
               <div className="border border-slate-800 bg-slate-900" key={board.title}>
@@ -191,10 +192,16 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
                     : board.title === "Top assists"
                       ? stats?.goals?.assists
                       : stats?.cards?.yellow
+                  const numericValue = typeof value === "number" ? value : Number(value || 0)
+                  const maximum = Math.max(...board.entries.map((item) => {
+                    const itemStats = item.statistics?.[0]
+                    const itemValue = board.title === "Top scorers" ? itemStats?.goals?.total : board.title === "Top assists" ? itemStats?.goals?.assists : itemStats?.cards?.yellow
+                    return typeof itemValue === "number" ? itemValue : Number(itemValue || 0)
+                  }), 1)
                   return (
-                    <Link className="flex items-center justify-between border-b border-slate-800 px-4 py-3 last:border-b-0 hover:bg-slate-800/60" href={`/players/${player.id}?league=${leagueId}`} key={player.id}>
-                      <span className="flex min-w-0 items-center gap-3"><span className="w-5 text-xs text-slate-500">{index + 1}</span><span className="truncate text-sm font-medium">{player.name}</span></span>
-                      <span className="text-sm font-bold text-cyan-300">{value ?? "-"}</span>
+                    <Link className="block border-b border-slate-800 px-4 py-3 last:border-b-0 hover:bg-slate-800/60" href={`/players/${player.id}?league=${leagueId}`} key={player.id}>
+                      <div className="flex items-center justify-between gap-3"><span className="flex min-w-0 items-center gap-3"><span className="w-5 text-xs text-slate-500">{index + 1}</span><span className="truncate text-sm font-medium">{player.name}</span></span><span className="text-sm font-bold text-cyan-300">{value ?? "-"}</span></div>
+                      <div className="mt-2 h-1.5 bg-slate-800"><div className="h-full bg-cyan-300" style={{ width: `${Math.max(6, (numericValue / maximum) * 100)}%` }} /></div>
                     </Link>
                   )
                 }) : <p className="p-4 text-sm text-slate-400">No leaderboard data available.</p>}

@@ -36,6 +36,13 @@ type PlayersResponse = {
   }>
 }
 
+const POSITION_GROUPS = [
+  { key: "Goalkeeper", label: "Goalkeepers" },
+  { key: "Defender", label: "Defenders" },
+  { key: "Midfielder", label: "Midfielders" },
+  { key: "Attacker", label: "Forwards" },
+] as const
+
 function numberOrDash(value?: number) {
   return typeof value === "number" ? value : "-"
 }
@@ -105,6 +112,10 @@ export default async function TeamPage({
   const goalsFor = stats?.goals?.for?.total?.total
   const goalsAgainst = stats?.goals?.against?.total?.total
   const players = playersResult?.data.response || []
+  const groupedPlayers = POSITION_GROUPS.map((group) => ({
+    ...group,
+    players: players.filter((entry) => entry.statistics?.[0]?.games?.position?.includes(group.key)),
+  }))
 
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
@@ -158,10 +169,16 @@ export default async function TeamPage({
 
         <section className="mt-8 border-t border-slate-800 pt-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Squad directory</p>
-          <h2 className="mt-2 text-2xl font-bold">Players</h2>
+          <h2 className="mt-2 text-2xl font-bold">Players by position</h2>
           {players.length > 0 ? (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {players.map((entry) => {
+            <div className="mt-5 space-y-8">
+              {groupedPlayers.map((group) => group.players.length > 0 && <section key={group.key}>
+                <div className="mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+                  <h3 className="text-lg font-semibold">{group.label}</h3>
+                  <span className="text-xs text-slate-500">{group.players.length} players</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.players.map((entry) => {
                 const player = entry.player
                 const statistic = entry.statistics?.[0]
                 if (!player?.id || !player.name) return null
@@ -182,7 +199,9 @@ export default async function TeamPage({
                     </div>
                   </Link>
                 )
-              })}
+                  })}
+                </div>
+              </section>)}
             </div>
           ) : (
             <p className="mt-5 border border-slate-800 bg-slate-900 p-5 text-sm text-slate-400">The current squad directory is unavailable.</p>
