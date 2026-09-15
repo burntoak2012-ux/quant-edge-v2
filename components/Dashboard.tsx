@@ -4,6 +4,7 @@ import { useUser, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import SignalCard from "@/components/SignalCard"
+import { LEAGUES } from "@/lib/leagues"
 
 type Match = {
   fixtureId: number
@@ -137,6 +138,25 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        <section className="mb-8 border-y border-slate-800 py-6">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Competition hub</p>
+              <h2 className="mt-2 text-2xl font-bold">Browse leagues</h2>
+            </div>
+            <Link className="text-sm text-cyan-300 hover:text-cyan-200" href="/leagues">View all</Link>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {LEAGUES.map((league) => (
+              <Link className="border border-slate-800 bg-slate-900 p-4 transition hover:border-cyan-400/60" href={`/leagues/${league.id}`} key={league.id}>
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{league.country}</p>
+                <p className="mt-2 font-semibold text-white">{league.name}</p>
+                <p className="mt-2 text-xs text-cyan-300">Standings &amp; fixtures &rarr;</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">Loading today&apos;s fixtures...</div>}
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
