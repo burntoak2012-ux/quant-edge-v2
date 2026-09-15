@@ -58,11 +58,18 @@ function formatDate(value?: string) {
   return new Date(value).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })
 }
 
-export default async function LeaguePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeaguePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ view?: string; date?: string; round?: string }>
+}) {
   const access = await requireActiveSubscription()
   if (!access.ok) redirect(access.status === 401 ? "/sign-in" : "/pricing")
 
   const { id } = await params
+  const filters = await searchParams
   const leagueId = Number(id)
   const league = getLeague(leagueId)
   const apiKey = process.env.API_FOOTBALL_KEY
@@ -91,6 +98,19 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
     groups[round].push(fixture)
     return groups
   }, {})
+  const rounds = Object.keys(groupedFixtures)
+  const roundIndex = Math.min(Math.max(Number.parseInt(filters.round || "0", 10) || 0, 0), Math.max(rounds.length - 1, 0))
+  const activeView = filters.view === "date" ? "date" : "matchday"
+  const activeDate = filters.date || fixtures[0]?.fixture.date?.slice(0, 10) || ""
+  const visibleFixtures = activeView === "date"
+    ? fixtures.filter((fixture) => fixture.fixture.date?.slice(0, 10) === activeDate)
+    : groupedFixtures[rounds[roundIndex]] || []
+  const previousRound = Math.max(roundIndex - 1, 0)
+  const nextRound = Math.min(roundIndex + 1, Math.max(rounds.length - 1, 0))
+  const leagueHref = (params: Record<string, string>) => {
+    const query = new URLSearchParams(params).toString()
+    return `/leagues/${leagueId}?${query}`
+  }
 
   const leaderboardCards = leaderboardTypes.map(([title], index) => ({
     title,
@@ -149,14 +169,34 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Schedule</p>
                 <h2 className="mt-2 text-2xl font-bold">All fixtures</h2>
               </div>
-              <span className="text-xs text-slate-500">{fixtures.length} matches</span>
+              <span className="text-xs text-slate-500">{fixtures.length} matches in season</span>
             </div>
-            <div className="mt-5 space-y-6">
-              {Object.entries(groupedFixtures).map(([round, roundFixtures]) => (
-                <div key={round}>
-                  <h3 className="mb-2 text-sm font-semibold text-slate-300">{round}</h3>
-                  <div className="border border-slate-800">
-                    {roundFixtures.map((fixture) => (
+            <div className="mt-5 border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex border border-slate-700 p-1 text-sm">
+                  <Link className={`px-3 py-2 ${activeView === "matchday" ? "bg-cyan-300 font-semibold text-slate-950" : "text-slate-300 hover:text-white"}`} href={leagueHref({ view: "matchday", round: String(roundIndex) })}>Matchday</Link>
+                  <Link className={`px-3 py-2 ${activeView === "date" ? "bg-cyan-300 font-semibold text-slate-950" : "text-slate-300 hover:text-white"}`} href={leagueHref({ view: "date", date: activeDate })}>Date</Link>
+                </div>
+                {activeView === "matchday" ? (
+                  <div className="flex items-center gap-2">
+                    <Link aria-label="Previous matchday" className="flex h-9 w-9 items-center justify-center border border-slate-700 text-lg hover:border-cyan-300" href={leagueHref({ view: "matchday", round: String(previousRound) })}>&larr;</Link>
+                    <span className="min-w-32 text-center text-sm font-semibold text-slate-200">{rounds[roundIndex] || "Matchday unavailable"}</span>
+                    <Link aria-label="Next matchday" className="flex h-9 w-9 items-center justify-center border border-slate-700 text-lg hover:border-cyan-300" href={leagueHref({ view: "matchday", round: String(nextRound) })}>&rarr;</Link>
+                  </div>
+                ) : (
+                  <form className="flex items-center gap-2" method="get">
+                    <input name="view" type="hidden" value="date" />
+                    <input className="h-9 border border-slate-700 bg-slate-950 px-2 text-sm text-white" name="date" type="date" value={activeDate} />
+                    <button className="h-9 border border-cyan-300 px-3 text-sm font-semibold text-cyan-200 hover:bg-cyan-300/10" type="submit">Show date</button>
+                  </form>
+                )}
+              </div>
+              <p className="mt-3 text-xs text-slate-500">Showing {visibleFixtures.length} fixtures in this view. Use the arrows to move through the season.</p>
+            </div>
+            <div className="mt-4">
+              {visibleFixtures.length > 0 ? (
+                <div className="border border-slate-800">
+                    {visibleFixtures.map((fixture) => (
                       <div className="grid gap-2 border-b border-slate-800 p-3 last:border-b-0 sm:grid-cols-[110px_minmax(0,1fr)_90px] sm:items-center" key={fixture.fixture.id}>
                         <p className="text-xs text-slate-500">{formatDate(fixture.fixture.date)}</p>
                         <div className="text-sm">
@@ -167,10 +207,8 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
                         <p className="text-left text-xs text-slate-500 sm:text-right">{fixture.goals?.home !== null && fixture.goals?.home !== undefined ? `${fixture.goals.home} - ${fixture.goals.away}` : fixture.fixture.status?.short || "Scheduled"}</p>
                       </div>
                     ))}
-                  </div>
                 </div>
-              ))}
-              {fixtures.length === 0 && <p className="border border-slate-800 p-5 text-sm text-slate-400">Fixtures are unavailable for this competition.</p>}
+              ) : <p className="border border-slate-800 p-5 text-sm text-slate-400">No fixtures are available for this selection.</p>}
             </div>
           </section>
         </div>

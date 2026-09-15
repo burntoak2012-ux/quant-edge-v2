@@ -35,13 +35,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
 
   async function loadMatches() {
     setLoading(true)
     setError("")
 
     try {
-      const res = await fetch("/api/matches", { cache: "no-store" })
+      const res = await fetch(`/api/matches?date=${selectedDate}`, { cache: "no-store" })
       const contentType = res.headers.get("content-type") || ""
       const data = contentType.includes("application/json")
         ? await res.json()
@@ -73,7 +74,13 @@ export default function Dashboard() {
       window.clearTimeout(initialLoad)
       window.clearInterval(interval)
     }
-  }, [])
+  }, [selectedDate])
+
+  function shiftDate(days: number) {
+    const date = new Date(`${selectedDate}T12:00:00`)
+    date.setDate(date.getDate() + days)
+    setSelectedDate(date.toISOString().slice(0, 10))
+  }
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const visibleMatches = normalizedQuery
@@ -156,6 +163,21 @@ export default function Dashboard() {
               </Link>
             ))}
           </div>
+        </section>
+
+        <section className="mb-8 border-b border-slate-800 pb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Fixture calendar</p>
+              <h2 className="mt-2 text-2xl font-bold">Choose a match date</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button aria-label="Previous date" className="h-10 w-10 border border-slate-700 text-lg text-slate-200 hover:border-cyan-300" onClick={() => shiftDate(-1)} type="button">&larr;</button>
+              <input className="h-10 border border-slate-700 bg-slate-900 px-3 text-sm text-white" onChange={(event) => setSelectedDate(event.target.value)} type="date" value={selectedDate} />
+              <button aria-label="Next date" className="h-10 w-10 border border-slate-700 text-lg text-slate-200 hover:border-cyan-300" onClick={() => shiftDate(1)} type="button">&rarr;</button>
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-slate-400">Showing fixtures scheduled for {new Date(`${selectedDate}T12:00:00`).toLocaleDateString([], { dateStyle: "full" })}.</p>
         </section>
 
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">Loading today&apos;s fixtures...</div>}

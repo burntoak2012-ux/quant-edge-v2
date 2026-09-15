@@ -61,7 +61,7 @@ async function fetchTeamRating(teamId: number, leagueId: number, season: number)
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const access = await requireActiveSubscription()
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status })
@@ -73,7 +73,10 @@ export async function GET() {
       )
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const requestedDate = new URL(request.url).searchParams.get("date")
+    const today = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+      ? requestedDate
+      : new Date().toISOString().slice(0, 10)
 
     const res = await fetch(
       `https://v3.football.api-sports.io/fixtures?date=${today}`,
