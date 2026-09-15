@@ -70,6 +70,11 @@ test("quant player rating should not invent form from a player's name", () => {
   )
 })
 
+test("quant player rating stays within the 60 to 99 product scale", () => {
+  assert.ok(calculateQuantPlayerRating({ baseRating: 99, form: 99, performanceRating: 99, minutes: 3000, appearances: 35, isStarter: true }) <= 99)
+  assert.ok(calculateQuantPlayerRating({ baseRating: 55, form: 55, performanceRating: 55, minutes: 0, appearances: 0, isStarter: false }) >= 60)
+})
+
 test("lineup rating should reward starters and stronger role balance", () => {
   const eliteLineup = calculateLineupRating([
     { player: { name: "Kylian Mbappe" }, position: "FWD", starts: true },

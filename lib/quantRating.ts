@@ -8,6 +8,7 @@ export type QuantPlayerInput = {
   assists?: number
   tackles?: number
   interceptions?: number
+  performanceRating?: number
   isStarter?: boolean
 }
 
@@ -38,17 +39,19 @@ export function calculateQuantPlayerRating(input: QuantPlayerInput = {}) {
   const contributionRate = minutes > 0 ? (goalContributions * 90) / minutes : 0
   const defensiveRate = minutes > 0 ? (defensiveActions * 90) / minutes : 0
   const production = clamp(50 + contributionRate * 22 + defensiveRate * 4, 50, 95)
+  const recentPerformance = clamp(input.performanceRating ?? form, 55, 99)
   const role = positionScore(input.position)
 
   const rating =
     baseRating * 0.42 +
-    form * 0.24 +
+    form * 0.18 +
+    recentPerformance * 0.14 +
     role * 0.14 +
     production * 0.12 +
     availability * 0.5 +
     starts * 2
 
-  return clamp(Math.round(rating), 55, 95)
+  return clamp(Math.round(rating), 60, 99)
 }
 
 type QuantTeamInput = {

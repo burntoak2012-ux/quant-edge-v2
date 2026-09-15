@@ -27,6 +27,18 @@ type LeagueResponse = {
 
 type FixturesResponse = { response?: Fixture[] }
 
+type LeaderboardEntry = {
+  player?: { id?: number; name?: string; photo?: string }
+  statistics?: Array<{
+    team?: { name?: string }
+    goals?: { total?: number; assists?: number }
+    games?: { appearances?: number; rating?: string }
+    cards?: { yellow?: number; red?: number }
+  }>
+}
+
+type LeaderboardResponse = { response?: LeaderboardEntry[] }
+
 async function fetchSeasonData<T>(endpoint: string, apiKey: string, currentSeason: number) {
   for (const season of [currentSeason, SUPPORTED_BASELINE_SEASON]) {
     if (season === SUPPORTED_BASELINE_SEASON && currentSeason === SUPPORTED_BASELINE_SEASON) continue
@@ -61,6 +73,14 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
     fetchSeasonData<LeagueResponse>(`standings?league=${leagueId}`, apiKey, season),
     fetchSeasonData<FixturesResponse>(`fixtures?league=${leagueId}`, apiKey, season),
   ])
+  const leaderboardTypes = [
+    ["Top scorers", "players/topscorers"],
+    ["Top assists", "players/topassists"],
+    ["Most yellow cards", "players/topyellowcards"],
+  ] as const
+  const leaderboardResults = await Promise.all(
+    leaderboardTypes.map(async ([, endpoint]) => fetchSeasonData<LeaderboardResponse>(`${endpoint}?league=${leagueId}`, apiKey, season))
+  )
 
   const standings = standingsResult?.data.response?.[0]?.league?.standings?.[0] || []
   const fixtures = fixturesResult?.data.response || []
@@ -71,6 +91,11 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
     groups[round].push(fixture)
     return groups
   }, {})
+
+  const leaderboardCards = leaderboardTypes.map(([title], index) => ({
+    title,
+    entries: leaderboardResults[index]?.data.response?.slice(0, 10) || [],
+  }))
 
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
@@ -149,6 +174,34 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
             </div>
           </section>
         </div>
+
+        <section className="mt-10 border-t border-slate-800 pt-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Leaderboards</p>
+          <h2 className="mt-2 text-2xl font-bold">Season leaders</h2>
+          <div className="mt-5 grid gap-5 lg:grid-cols-3">
+            {leaderboardCards.map((board) => (
+              <div className="border border-slate-800 bg-slate-900" key={board.title}>
+                <h3 className="border-b border-slate-800 px-4 py-3 font-semibold">{board.title}</h3>
+                {board.entries.length > 0 ? board.entries.map((entry, index) => {
+                  const player = entry.player
+                  const stats = entry.statistics?.[0]
+                  if (!player?.id || !player.name) return null
+                  const value = board.title === "Top scorers"
+                    ? stats?.goals?.total
+                    : board.title === "Top assists"
+                      ? stats?.goals?.assists
+                      : stats?.cards?.yellow
+                  return (
+                    <Link className="flex items-center justify-between border-b border-slate-800 px-4 py-3 last:border-b-0 hover:bg-slate-800/60" href={`/players/${player.id}?league=${leagueId}`} key={player.id}>
+                      <span className="flex min-w-0 items-center gap-3"><span className="w-5 text-xs text-slate-500">{index + 1}</span><span className="truncate text-sm font-medium">{player.name}</span></span>
+                      <span className="text-sm font-bold text-cyan-300">{value ?? "-"}</span>
+                    </Link>
+                  )
+                }) : <p className="p-4 text-sm text-slate-400">No leaderboard data available.</p>}
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   )

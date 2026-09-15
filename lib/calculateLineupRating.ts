@@ -17,6 +17,7 @@ export function calculateLineupRating(players: LineupPlayer[]) {
     const isStarter = item.starts ?? true
     const rating = getPlayerRating(name, {
       position,
+      performanceRating: typeof item.soccerWikiRating === "number" ? item.soccerWikiRating : undefined,
       minutes: isStarter ? 1800 : 450,
       isStarter,
     })

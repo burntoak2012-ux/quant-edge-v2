@@ -65,7 +65,6 @@ export default async function TeamPage({
   const statsUrl = Number.isInteger(leagueId)
     ? `${API_URL}/teams/statistics?team=${teamId}&league=${leagueId}&season=${season}`
     : null
-  const playersUrl = `${API_URL}/players?team=${teamId}&season=${season}`
 
   const statsRequest = statsUrl
     ? (async () => {
@@ -79,10 +78,20 @@ export default async function TeamPage({
       })()
     : Promise.resolve(null)
 
+  const playersRequest = (async () => {
+    for (const requestedSeason of [season, baselineSeason]) {
+      if (requestedSeason === baselineSeason && season === baselineSeason) continue
+      const response = await fetch(`${API_URL}/players?team=${teamId}&season=${requestedSeason}`, { headers, next: { revalidate: 21600 } })
+      const data = await response.json() as PlayersResponse
+      if (data.response && data.response.length > 0) return { data, season: requestedSeason }
+    }
+    return null
+  })()
+
   const [teamResult, statsResult, playersResult] = await Promise.all([
     fetch(teamUrl, { headers, cache: "no-store" }).then((response) => response.json() as Promise<TeamResponse>),
     statsRequest,
-    fetch(playersUrl, { headers, cache: "no-store" }).then((response) => response.json() as Promise<PlayersResponse>),
+    playersRequest,
   ])
 
   const team = teamResult.response?.[0]
@@ -95,7 +104,7 @@ export default async function TeamPage({
   const losses = stats?.fixtures?.loses?.total
   const goalsFor = stats?.goals?.for?.total?.total
   const goalsAgainst = stats?.goals?.against?.total?.total
-  const players = playersResult.response || []
+  const players = playersResult?.data.response || []
 
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">

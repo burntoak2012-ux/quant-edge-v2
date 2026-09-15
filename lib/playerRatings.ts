@@ -9,6 +9,7 @@ export type PlayerRatingContext = {
   assists?: number
   tackles?: number
   interceptions?: number
+  performanceRating?: number
   isStarter?: boolean
 }
 

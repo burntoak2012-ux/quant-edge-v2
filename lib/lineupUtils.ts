@@ -29,7 +29,8 @@ export async function computeTeamTotals(players: LineupPlayer[]) {
     const isStarter = item.starts ?? true
     const rating = getPlayerRating(name, {
       position,
-      form: typeof item.soccerWikiRating === "number" ? item.soccerWikiRating : 72 + (name.length % 16),
+      performanceRating: typeof item.soccerWikiRating === "number" ? item.soccerWikiRating : undefined,
+      form: typeof item.soccerWikiRating === "number" ? item.soccerWikiRating : undefined,
       minutes: isStarter ? 1800 : 450,
       isStarter,
     })
