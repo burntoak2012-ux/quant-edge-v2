@@ -1,0 +1,185 @@
+import Link from "next/link"
+import { notFound, redirect } from "next/navigation"
+import { requireActiveSubscription } from "@/lib/requireSubscription"
+
+const API_URL = "https://v3.football.api-sports.io"
+
+type TeamResponse = {
+  response?: Array<{
+    team?: { id?: number; name?: string; code?: string; country?: string; founded?: number; logo?: string }
+    venue?: { name?: string; city?: string; capacity?: number }
+  }>
+  errors?: Record<string, string>
+}
+
+type StatsResponse = {
+  response?: {
+    fixtures?: {
+      played?: { total?: number }
+      wins?: { total?: number }
+      draws?: { total?: number }
+      loses?: { total?: number }
+    }
+    goals?: {
+      for?: { total?: { total?: number } }
+      against?: { total?: { total?: number } }
+    }
+    form?: string
+  }
+  errors?: Record<string, string>
+}
+
+type PlayersResponse = {
+  response?: Array<{
+    player?: { id?: number; name?: string; photo?: string; nationality?: string }
+    statistics?: Array<{ games?: { position?: string; appearances?: number }; goals?: { total?: number; assists?: number } }>
+  }>
+}
+
+function numberOrDash(value?: number) {
+  return typeof value === "number" ? value : "-"
+}
+
+export default async function TeamPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ league?: string }>
+}) {
+  const access = await requireActiveSubscription()
+  if (!access.ok) redirect(access.status === 401 ? "/sign-in" : "/pricing")
+
+  const { id } = await params
+  const { league } = await searchParams
+  const teamId = Number(id)
+  const leagueId = Number(league)
+  const apiKey = process.env.API_FOOTBALL_KEY
+
+  if (!Number.isInteger(teamId) || !apiKey) notFound()
+
+  const headers = { "x-apisports-key": apiKey }
+  const season = new Date().getUTCFullYear()
+  const baselineSeason = 2024
+  const teamUrl = `${API_URL}/teams?id=${teamId}`
+  const statsUrl = Number.isInteger(leagueId)
+    ? `${API_URL}/teams/statistics?team=${teamId}&league=${leagueId}&season=${season}`
+    : null
+  const playersUrl = `${API_URL}/players?team=${teamId}&season=${season}`
+
+  const statsRequest = statsUrl
+    ? (async () => {
+        for (const requestedSeason of [season, baselineSeason]) {
+          if (requestedSeason === baselineSeason && season === baselineSeason) continue
+          const response = await fetch(`${API_URL}/teams/statistics?team=${teamId}&league=${leagueId}&season=${requestedSeason}`, { headers, next: { revalidate: 21600 } })
+          const data = await response.json() as StatsResponse
+          if (data.response) return { data, season: requestedSeason }
+        }
+        return null
+      })()
+    : Promise.resolve(null)
+
+  const [teamResult, statsResult, playersResult] = await Promise.all([
+    fetch(teamUrl, { headers, cache: "no-store" }).then((response) => response.json() as Promise<TeamResponse>),
+    statsRequest,
+    fetch(playersUrl, { headers, cache: "no-store" }).then((response) => response.json() as Promise<PlayersResponse>),
+  ])
+
+  const team = teamResult.response?.[0]
+  if (!team?.team?.name) notFound()
+
+  const stats = statsResult?.data.response
+  const played = stats?.fixtures?.played?.total
+  const wins = stats?.fixtures?.wins?.total
+  const draws = stats?.fixtures?.draws?.total
+  const losses = stats?.fixtures?.loses?.total
+  const goalsFor = stats?.goals?.for?.total?.total
+  const goalsAgainst = stats?.goals?.against?.total?.total
+  const players = playersResult.response || []
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
+      <div className="mx-auto max-w-5xl">
+        <Link className="text-sm text-cyan-300 hover:text-cyan-200" href="/app">Back to today&apos;s fixtures</Link>
+        <header className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/20 sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Team profile</p>
+              <h1 className="mt-2 text-4xl font-bold">{team.team.name}</h1>
+              <p className="mt-2 text-slate-400">{team.team.country || "European competition"}{team.team.code ? ` • ${team.team.code}` : ""}</p>
+            </div>
+            {team.team.logo && <img alt="" className="h-20 w-20 object-contain" src={team.team.logo} />}
+          </div>
+          <div className="mt-6 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
+            <div className="border-l-2 border-cyan-300 pl-3"><p className="text-xs text-slate-500">Founded</p><p className="mt-1 font-semibold">{numberOrDash(team.team.founded)}</p></div>
+            <div className="border-l-2 border-cyan-300 pl-3"><p className="text-xs text-slate-500">Home venue</p><p className="mt-1 font-semibold">{team.venue?.name || "Unavailable"}</p></div>
+            <div className="border-l-2 border-cyan-300 pl-3"><p className="text-xs text-slate-500">Venue city</p><p className="mt-1 font-semibold">{team.venue?.city || "Unavailable"}</p></div>
+          </div>
+        </header>
+
+        <section className="mt-6 border-t border-slate-800 pt-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Season snapshot</p>
+              <h2 className="mt-2 text-2xl font-bold">Recent competition stats</h2>
+            </div>
+            <span className="text-xs text-slate-500">{statsResult?.season || season} baseline</span>
+          </div>
+          {stats ? (
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ["Played", played],
+                ["Wins", wins],
+                ["Draws", draws],
+                ["Losses", losses],
+                ["Goals for", goalsFor],
+                ["Goals against", goalsAgainst],
+                ["Form", stats.form || "-"],
+              ].map(([label, value]) => (
+                <div className="border border-slate-800 bg-slate-900 p-4" key={label}>
+                  <p className="text-xs uppercase tracking-[0.15em] text-slate-500">{label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{value ?? "-"}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">Competition statistics are unavailable for this fixture.</div>
+          )}
+        </section>
+
+        <section className="mt-8 border-t border-slate-800 pt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Squad directory</p>
+          <h2 className="mt-2 text-2xl font-bold">Players</h2>
+          {players.length > 0 ? (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {players.map((entry) => {
+                const player = entry.player
+                const statistic = entry.statistics?.[0]
+                if (!player?.id || !player.name) return null
+
+                return (
+                  <Link className="border border-slate-800 bg-slate-900 p-4 transition hover:border-cyan-400/60" href={`/players/${player.id}?team=${teamId}&league=${leagueId}`} key={player.id}>
+                    <div className="flex items-center gap-3">
+                      {player.photo && <img alt="" className="h-10 w-10 rounded-full object-cover" src={player.photo} />}
+                      <div>
+                        <p className="font-semibold text-white">{player.name}</p>
+                        <p className="text-xs text-slate-500">{statistic?.games?.position || player.nationality || "Player"}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex gap-4 text-xs text-slate-400">
+                      <span>Apps {statistic?.games?.appearances ?? "-"}</span>
+                      <span>Goals {statistic?.goals?.total ?? "-"}</span>
+                      <span>Assists {statistic?.goals?.assists ?? "-"}</span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="mt-5 border border-slate-800 bg-slate-900 p-5 text-sm text-slate-400">The current squad directory is unavailable.</p>
+          )}
+        </section>
+      </div>
+    </main>
+  )
+}

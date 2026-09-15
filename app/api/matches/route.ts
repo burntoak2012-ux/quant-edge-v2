@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
 import { generateSignal } from "@/lib/generateSignal"
 import { teamRatings } from "@/lib/teamRatings"
+import { calculateTeamRating } from "@/lib/calculateTeamRating"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 
 export const dynamic = "force-dynamic"
 
 const API_KEY = process.env.API_FOOTBALL_KEY
+const RATING_BASELINE_SEASON = 2024
 const TARGET_LEAGUE_IDS = new Set([
   39,  // Premier League
   140, // La Liga
@@ -22,11 +24,40 @@ const MAX_FIXTURES = Number.isFinite(configuredFixtureLimit) && configuredFixtur
   : 10
 
 type Fixture = {
-  fixture: { id: number; date?: string }
-  league: { id: number; name?: string; season?: number }
+  fixture: { id: number; date?: string; status?: { short?: string; long?: string } }
+  league: { id: number; name?: string; season?: number; round?: string }
   teams: {
     home: { id: number; name: string }
     away: { id: number; name: string }
+  }
+}
+
+type TeamStatsResponse = {
+  response?: Parameters<typeof calculateTeamRating>[0]
+}
+
+async function fetchTeamRating(teamId: number, leagueId: number, season: number) {
+  try {
+    for (const requestedSeason of [season, RATING_BASELINE_SEASON]) {
+      if (requestedSeason === RATING_BASELINE_SEASON && season === RATING_BASELINE_SEASON) continue
+
+      const response = await fetch(
+        `https://v3.football.api-sports.io/teams/statistics?team=${teamId}&league=${leagueId}&season=${requestedSeason}`,
+        {
+          headers: { "x-apisports-key": API_KEY || "" },
+          next: { revalidate: 21600 },
+        }
+      )
+      if (!response.ok) continue
+
+      const data = await response.json() as TeamStatsResponse
+      if (data.response) return calculateTeamRating(data.response)
+    }
+
+    return null
+  } catch (error) {
+    console.error("TEAM RATING ERROR", { teamId, leagueId, season, error })
+    return null
   }
 }
 
@@ -83,18 +114,32 @@ console.log("API ERRORS:", data.errors)
       qualifyingLeagueIds: fixtures.map((item: Fixture) => item.league.id),
     })
 
+    const selectedFixtures = fixtures.slice(0, MAX_FIXTURES)
+    const ratingEntries = await Promise.all(
+      selectedFixtures.flatMap((item: Fixture) => [
+        fetchTeamRating(item.teams.home.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
+        fetchTeamRating(item.teams.away.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
+      ])
+    )
+
     const matches = await Promise.all(
-      fixtures.slice(0, MAX_FIXTURES).map(async (item: Fixture) => {
+      selectedFixtures.map(async (item: Fixture, index: number) => {
         const fixtureId = item.fixture.id
-        let homeRating = teamRatings[item.teams.home.name] || 70
-        let awayRating = teamRatings[item.teams.away.name] || 70
+        const homeRating = ratingEntries[index * 2] || teamRatings[item.teams.home.name] || 70
+        const awayRating = ratingEntries[index * 2 + 1] || teamRatings[item.teams.away.name] || 70
 
         const signalResult = generateSignal(homeRating, awayRating)
 
         return {
           fixtureId,
+          kickoff: item.fixture.date || null,
+          status: item.fixture.status?.long || item.fixture.status?.short || "Scheduled",
+          leagueId: item.league.id,
+          round: item.league.round || null,
           leagueName: item.league.name || "European competition",
+          homeTeamId: item.teams.home.id,
           homeTeam: item.teams.home.name,
+          awayTeamId: item.teams.away.id,
           awayTeam: item.teams.away.name,
           signal: signalResult.signal,
           confidence: signalResult.confidence,
