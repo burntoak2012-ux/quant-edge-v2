@@ -118,10 +118,10 @@ export default async function TeamPage({
   }))
 
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
+    <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-5xl">
         <Link className="text-sm text-cyan-300 hover:text-cyan-200" href="/app">Back to today&apos;s fixtures</Link>
-        <header className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/20 sm:p-8">
+        <header className="qe-panel mt-6 rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Team profile</p>
@@ -156,7 +156,7 @@ export default async function TeamPage({
                 ["Goals against", goalsAgainst],
                 ["Form", stats.form || "-"],
               ].map(([label, value]) => (
-                <div className="border border-slate-800 bg-slate-900 p-4" key={label}>
+                <div className="qe-panel rounded-2xl border p-4" key={label}>
                   <p className="text-xs uppercase tracking-[0.15em] text-slate-500">{label}</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{value ?? "-"}</p>
                 </div>
@@ -184,7 +184,7 @@ export default async function TeamPage({
                 if (!player?.id || !player.name) return null
 
                 return (
-                  <Link className="border border-slate-800 bg-slate-900 p-4 transition hover:border-cyan-400/60" href={`/players/${player.id}?team=${teamId}&league=${leagueId}`} key={player.id}>
+                  <Link className="qe-panel rounded-2xl border p-4" href={`/players/${player.id}?team=${teamId}&league=${leagueId}`} key={player.id}>
                     <div className="flex items-center gap-3">
                       {player.photo && <img alt="" className="h-10 w-10 rounded-full object-cover" src={player.photo} />}
                       <div>

@@ -118,7 +118,7 @@ export default async function LeaguePage({
   }))
 
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
+    <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-7xl">
         <Link className="text-sm text-cyan-300 hover:text-cyan-200" href="/leagues">Back to leagues</Link>
         <header className="mt-6 flex flex-col gap-4 border-b border-slate-800 pb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -138,7 +138,7 @@ export default async function LeaguePage({
               </div>
               <span className="text-xs text-slate-500">{standings.length} teams</span>
             </div>
-            <div className="mt-5 overflow-x-auto border border-slate-800">
+            <div className="qe-panel mt-5 overflow-x-auto rounded-2xl border">
               {standings.length > 0 ? (
                 <table className="w-full min-w-[560px] text-left text-sm">
                   <thead className="bg-slate-900 text-xs uppercase tracking-[0.12em] text-slate-500">
@@ -171,7 +171,7 @@ export default async function LeaguePage({
               </div>
               <span className="text-xs text-slate-500">{fixtures.length} matches in season</span>
             </div>
-            <div className="mt-5 border border-slate-800 bg-slate-900/60 p-4">
+            <div className="qe-panel mt-5 rounded-2xl border p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex border border-slate-700 p-1 text-sm">
                   <Link className={`px-3 py-2 ${activeView === "matchday" ? "bg-cyan-300 font-semibold text-slate-950" : "text-slate-300 hover:text-white"}`} href={leagueHref({ view: "matchday", round: String(roundIndex) })}>Matchday</Link>
@@ -195,7 +195,7 @@ export default async function LeaguePage({
             </div>
             <div className="mt-4">
               {visibleFixtures.length > 0 ? (
-                <div className="border border-slate-800">
+                <div className="qe-panel rounded-2xl border">
                     {visibleFixtures.map((fixture) => (
                       <div className="grid gap-2 border-b border-slate-800 p-3 last:border-b-0 sm:grid-cols-[110px_minmax(0,1fr)_90px] sm:items-center" key={fixture.fixture.id}>
                         <p className="text-xs text-slate-500">{formatDate(fixture.fixture.date)}</p>
@@ -219,7 +219,7 @@ export default async function LeaguePage({
           <p className="mt-2 text-sm text-slate-400">Goals, assists, and discipline leaders from the {displayedSeason} data set.</p>
           <div className="mt-5 grid gap-5 lg:grid-cols-3">
             {leaderboardCards.map((board) => (
-              <div className="border border-slate-800 bg-slate-900" key={board.title}>
+              <div className="qe-panel rounded-2xl border" key={board.title}>
                 <h3 className="border-b border-slate-800 px-4 py-3 font-semibold">{board.title}</h3>
                 {board.entries.length > 0 ? board.entries.map((entry, index) => {
                   const player = entry.player

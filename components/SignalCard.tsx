@@ -62,10 +62,10 @@ export default function SignalCard({
       : "text-orange-400"
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/20">
+    <div className="qe-panel qe-reveal rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-7">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{leagueName}</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">{leagueName}</p>
           <h2 className="text-2xl font-bold">
             <Link className="hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`}>{homeTeam}</Link>
             <span className="text-slate-500"> vs </span>

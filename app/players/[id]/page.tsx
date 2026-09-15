@@ -75,10 +75,10 @@ export default async function PlayerPage({
   })
 
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
+    <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-4xl">
         <Link className="text-sm text-cyan-300 hover:text-cyan-200" href={team ? `/teams/${team}?league=${league || ""}` : "/app"}>Back to team profile</Link>
-        <header className="mt-6 flex flex-col gap-5 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/20 sm:flex-row sm:items-center sm:p-8">
+        <header className="qe-panel mt-6 flex flex-col gap-5 rounded-3xl border p-6 shadow-xl shadow-black/20 sm:flex-row sm:items-center sm:p-8">
           {player.photo && <img alt="" className="h-24 w-24 rounded-full object-cover" src={player.photo} />}
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Player profile</p>
@@ -95,7 +95,7 @@ export default async function PlayerPage({
             </div>
             <span className="text-xs text-slate-500">{stats?.league?.name || "Competition"} / {dataSeason} baseline</span>
           </div>
-          <div className="mt-5 border border-cyan-400/30 bg-cyan-400/5 p-5">
+          <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-5">
             <p className="text-xs uppercase tracking-[0.15em] text-cyan-300">Quant Edge rating</p>
             <div className="mt-2 flex items-end gap-3"><p className="text-5xl font-bold text-white">{quantRating}</p><p className="pb-1 text-sm text-slate-400">/ 99</p></div>
             <p className="mt-2 text-sm text-slate-400">Dynamic estimate using recent performance, minutes, appearances, production, position, and availability.</p>
@@ -111,7 +111,7 @@ export default async function PlayerPage({
               ["Key passes", stats?.passes?.key],
               ["Rating", stats?.games?.rating],
             ].map(([label, value]) => (
-              <div className="border border-slate-800 bg-slate-900 p-4" key={label}>
+              <div className="qe-panel rounded-2xl border p-4" key={label}>
                 <p className="text-xs uppercase tracking-[0.15em] text-slate-500">{label}</p>
                 <p className="mt-2 text-2xl font-semibold">{display(value)}</p>
               </div>

@@ -90,13 +90,13 @@ export default function Dashboard() {
     : matches
 
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-10">
+    <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/20 backdrop-blur-sm">
+        <header className="qe-panel qe-reveal mb-8 rounded-3xl border p-5 shadow-2xl shadow-cyan-950/20 sm:p-7">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300">Quant Edge / Match intelligence</p>
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Today&apos;s edge</h1>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">Today&apos;s edge<span className="text-lime-300">.</span></h1>
             </div>
 
             <div className="flex items-center gap-3">
@@ -111,15 +111,15 @@ export default function Dashboard() {
           </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="qe-panel rounded-2xl border p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Signal</p>
               <p className="mt-2 text-xl font-semibold text-cyan-300">Live</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="qe-panel rounded-2xl border p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Focus</p>
               <p className="mt-2 text-xl font-semibold text-white">{visibleMatches.length || 0} fixtures</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="qe-panel rounded-2xl border p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Welcome</p>
               <p className="mt-2 text-sm font-medium text-white">{user?.firstName || "Analyst"}</p>
             </div>
@@ -146,7 +146,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <section className="mb-8 border-y border-slate-800 py-6">
+        <section className="mb-8 border-y border-cyan-100/10 py-6">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Competition hub</p>
@@ -156,7 +156,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {LEAGUES.map((league) => (
-              <Link className="border border-slate-800 bg-slate-900 p-4 transition hover:border-cyan-400/60" href={`/leagues/${league.id}`} key={league.id}>
+              <Link className="qe-panel rounded-2xl border p-4" href={`/leagues/${league.id}`} key={league.id}>
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{league.country}</p>
                 <p className="mt-2 font-semibold text-white">{league.name}</p>
                 <p className="mt-2 text-xs text-cyan-300">Standings &amp; fixtures &rarr;</p>
@@ -165,7 +165,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="mb-8 border-b border-slate-800 pb-6">
+        <section className="mb-8 border-b border-cyan-100/10 pb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Fixture calendar</p>

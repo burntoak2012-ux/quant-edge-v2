@@ -38,12 +38,12 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-white sm:p-10">
+    <main className="qe-grid min-h-screen p-6 text-white sm:p-10">
       <div className="mx-auto max-w-3xl">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Quant Edge</p>
       <h1 className="mt-3 text-4xl font-bold">Simple access to the edge</h1>
       <p className="mt-3 max-w-xl text-slate-400">One plan for serious match analysis, with lineup-aware ratings when confirmed team sheets arrive.</p>
-      <div className="mt-10 max-w-md rounded-2xl border border-cyan-400/40 bg-slate-900 p-6">
+      <div className="qe-panel mt-10 max-w-md rounded-3xl border border-cyan-400/40 p-6">
         <h2 className="text-xl font-semibold">Pro</h2>
         <p className="mt-2 text-sm text-slate-400">Live signals and lineup totals, billed monthly.</p>
         <div className="mt-4">
