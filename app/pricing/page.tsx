@@ -45,6 +45,7 @@ export default function PricingPage() {
       <p className="mt-3 max-w-xl text-slate-400">One plan for serious match analysis, with lineup-aware ratings when confirmed team sheets arrive.</p>
       <div className="qe-panel mt-10 max-w-md rounded-3xl border border-cyan-400/40 p-6">
         <h2 className="text-xl font-semibold">Pro</h2>
+        <p className="mt-3 text-4xl font-bold text-lime-300">£9.99<span className="text-base font-medium text-slate-400"> / month</span></p>
         <p className="mt-2 text-sm text-slate-400">Live signals and lineup totals, billed monthly.</p>
         <div className="mt-4">
           <button
