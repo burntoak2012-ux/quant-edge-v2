@@ -1,3 +1,5 @@
+import { calculateQuantTeamRating } from "./quantRating"
+
 type TeamStats = {
   team?: { name?: string }
   fixtures?: {
@@ -10,10 +12,9 @@ type TeamStats = {
     for?: { total?: { total?: number; home?: number; away?: number } }
     against?: { total?: { total?: number; home?: number; away?: number } }
   }
+  clean_sheet?: { total?: number }
+  form?: string
 }
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max)
 
 export function calculateTeamRating(stats: TeamStats): number {
   if (!stats?.fixtures || !stats?.goals) {
@@ -46,25 +47,13 @@ export function calculateTeamRating(stats: TeamStats): number {
     ((stats.goals?.against?.total?.home ?? 0) +
       (stats.goals?.against?.total?.away ?? 0))
 
-  const games = wins + draws + losses
-
-  if (games < 5) {
-    return 70
-  }
-
-  const winRate = wins / games
-  const pointsPerGame = (wins * 3 + draws) / games
-  const goalDifference = goalsFor - goalsAgainst
-  const goalsForPerGame = goalsFor / games
-  const goalsAgainstPerGame = goalsAgainst / games
-
-  const rating =
-    58 +
-    winRate * 18 +
-    pointsPerGame * 7 +
-    goalDifference * 0.18 +
-    goalsForPerGame * 4 -
-    goalsAgainstPerGame * 2.5
-
-  return clamp(Math.round(rating), 52, 95)
+  return calculateQuantTeamRating({
+    wins,
+    draws,
+    losses,
+    goalsFor,
+    goalsAgainst,
+    cleanSheets: stats.clean_sheet?.total,
+    form: stats.form,
+  })
 }

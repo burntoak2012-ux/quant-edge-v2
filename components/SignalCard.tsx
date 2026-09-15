@@ -1,10 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 
 type Props = {
+  fixtureId: number
+  kickoff: string | null
+  status: string
+  leagueId: number
+  round: string | null
   leagueName: string
+  homeTeamId: number
   homeTeam: string
+  awayTeamId: number
   awayTeam: string
   signal: string
   confidence: number
@@ -17,8 +25,15 @@ type Props = {
 }
 
 export default function SignalCard({
+  fixtureId,
+  kickoff,
+  status,
+  leagueId,
+  round,
   leagueName,
+  homeTeamId,
   homeTeam,
+  awayTeamId,
   awayTeam,
   signal,
   confidence,
@@ -51,7 +66,17 @@ export default function SignalCard({
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{leagueName}</p>
-          <h2 className="text-2xl font-bold">{homeTeam} vs {awayTeam}</h2>
+          <h2 className="text-2xl font-bold">
+            <Link className="hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`}>{homeTeam}</Link>
+            <span className="text-slate-500"> vs </span>
+            <Link className="hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`}>{awayTeam}</Link>
+          </h2>
+          <p className="mt-2 text-xs text-slate-400">
+            {kickoff ? new Date(kickoff).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Kickoff unavailable"}
+            <span className="mx-2 text-slate-600">•</span>
+            {status}
+            {round && <><span className="mx-2 text-slate-600">•</span>{round}</>}
+          </p>
         </div>
         <button
           aria-expanded={showHelp}
@@ -79,7 +104,7 @@ export default function SignalCard({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="mb-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-7">
         <div>
           <p className="text-gray-400 text-xs">Signal</p>
           <p className={`font-bold ${signalColor}`}>
@@ -132,6 +157,10 @@ export default function SignalCard({
           </p>
           <p>{awayRating}</p>
         </div>
+      </div>
+
+      <div className="border-t border-slate-800 pt-4 text-xs text-slate-500">
+        <span>Fixture #{fixtureId}</span>
       </div>
     </div>
   )

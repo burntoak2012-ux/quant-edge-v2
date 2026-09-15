@@ -7,8 +7,14 @@ import SignalCard from "@/components/SignalCard"
 
 type Match = {
   fixtureId: number
+  kickoff: string | null
+  status: string
+  leagueId: number
+  round: string | null
   leagueName: string
+  homeTeamId: number
   homeTeam: string
+  awayTeamId: number
   awayTeam: string
   signal: string
   confidence: number
@@ -55,12 +61,17 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    void loadMatches()
+    const initialLoad = window.setTimeout(() => {
+      void loadMatches()
+    }, 0)
     const interval = window.setInterval(() => {
       void loadMatches()
     }, 60_000)
 
-    return () => window.clearInterval(interval)
+    return () => {
+      window.clearTimeout(initialLoad)
+      window.clearInterval(interval)
+    }
   }, [])
 
   const normalizedQuery = searchQuery.trim().toLowerCase()

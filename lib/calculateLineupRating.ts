@@ -17,7 +17,6 @@ export function calculateLineupRating(players: LineupPlayer[]) {
     const isStarter = item.starts ?? true
     const rating = getPlayerRating(name, {
       position,
-      form: 72 + (name.length % 16),
       minutes: isStarter ? 1800 : 450,
       isStarter,
     })

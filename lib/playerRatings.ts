@@ -1,7 +1,14 @@
+import { calculateQuantPlayerRating } from "./quantRating"
+
 export type PlayerRatingContext = {
   position?: string
   form?: number
   minutes?: number
+  appearances?: number
+  goals?: number
+  assists?: number
+  tackles?: number
+  interceptions?: number
   isStarter?: boolean
 }
 
@@ -27,37 +34,12 @@ export const playerRatings: Record<string, number> = {
   "Forward 1": 82,
 }
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max)
-
-const roleWeight = (position?: string) => {
-  const normalized = (position || "MID").toUpperCase()
-
-  if (normalized.includes("GK")) return 1.12
-  if (normalized.includes("DEF")) return 1.04
-  if (normalized.includes("MID")) return 1.1
-  if (normalized.includes("FWD")) return 1.18
-
-  return 1.06
-}
-
 export function getPlayerRating(
   name: string,
   context: PlayerRatingContext = {}
 ): number {
-  const base = playerRatings[name] ?? 72
-  const form = clamp(context.form ?? base, 55, 95)
-  const minutes = Math.max(0, context.minutes ?? 1800)
-  const starterBoost = context.isStarter ? 4.5 : context.isStarter === false ? -2.5 : 0
-  const minutesBoost = Math.min(minutes / 2600, 1) * 3.5
-  const weightedRole = roleWeight(context.position) * 10
-
-  const score =
-    base * 0.62 +
-    form * 0.24 +
-    weightedRole +
-    minutesBoost +
-    starterBoost
-
-  return clamp(Math.round(score), 55, 94)
+  return calculateQuantPlayerRating({
+    baseRating: playerRatings[name] ?? 72,
+    ...context,
+  })
 }

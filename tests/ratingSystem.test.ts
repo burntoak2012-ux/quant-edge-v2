@@ -4,6 +4,7 @@ import assert from "node:assert/strict"
 import { calculateLineupRating } from "../lib/calculateLineupRating"
 import { calculateTeamRating } from "../lib/calculateTeamRating"
 import { getPlayerRating } from "../lib/playerRatings"
+import { calculateQuantPlayerRating, calculateQuantTeamRating } from "../lib/quantRating"
 
 test("player rating should use a weighted internal form instead of raw static values", () => {
   const elite = getPlayerRating("Kylian Mbappe", { position: "FWD", isStarter: true, form: 86, minutes: 2200 })
@@ -28,6 +29,45 @@ test("team rating should reward stronger recent form and goal difference", () =>
   assert.ok(strong > weak)
   assert.ok(strong >= 72)
   assert.ok(weak < 70)
+})
+
+test("quant team rating should reward clean sheets and recent form", () => {
+  const inForm = calculateQuantTeamRating({
+    wins: 10,
+    draws: 2,
+    losses: 2,
+    goalsFor: 28,
+    goalsAgainst: 9,
+    cleanSheets: 8,
+    form: "WWDWW",
+  })
+  const fading = calculateQuantTeamRating({
+    wins: 10,
+    draws: 2,
+    losses: 2,
+    goalsFor: 28,
+    goalsAgainst: 9,
+    cleanSheets: 2,
+    form: "LLDWL",
+  })
+
+  assert.ok(inForm > fading)
+})
+
+test("quant player rating should not invent form from a player's name", () => {
+  const sameProfile = {
+    baseRating: 78,
+    position: "MID",
+    form: 78,
+    minutes: 1800,
+    appearances: 20,
+    isStarter: true,
+  } as const
+
+  assert.equal(
+    calculateQuantPlayerRating(sameProfile),
+    calculateQuantPlayerRating({ ...sameProfile }),
+  )
 })
 
 test("lineup rating should reward starters and stronger role balance", () => {
