@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { generateSignal } from "@/lib/generateSignal"
 import { teamRatings } from "@/lib/teamRatings"
 import { calculateTeamRating } from "@/lib/calculateTeamRating"
+import { calculateLineupRating } from "@/lib/calculateLineupRating"
+import { fetchLineups } from "@/lib/fetchLineups"
+import type { ApiLineup } from "@/lib/lineupUtils"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 
 export const dynamic = "force-dynamic"
@@ -34,6 +37,13 @@ type Fixture = {
 
 type TeamStatsResponse = {
   response?: Parameters<typeof calculateTeamRating>[0]
+}
+
+function findProjectedRating(
+  ratings: Array<{ team: string; rating: number }> | null,
+  teamName: string,
+) {
+  return ratings?.find((entry) => entry.team === teamName)?.rating || null
 }
 
 async function fetchTeamRating(teamId: number, leagueId: number, season: number) {
@@ -124,14 +134,20 @@ console.log("API ERRORS:", data.errors)
         fetchTeamRating(item.teams.away.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
       ])
     )
+    const projectedLineupEntries = await Promise.all(
+      selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(item.fixture.id))
+    )
 
     const matches = await Promise.all(
       selectedFixtures.map(async (item: Fixture, index: number) => {
         const fixtureId = item.fixture.id
         const homeRating = ratingEntries[index * 2] || teamRatings[item.teams.home.name] || 70
         const awayRating = ratingEntries[index * 2 + 1] || teamRatings[item.teams.away.name] || 70
+        const projectedLineups = projectedLineupEntries[index]
+        const homeProjectedRating = findProjectedRating(projectedLineups, item.teams.home.name)
+        const awayProjectedRating = findProjectedRating(projectedLineups, item.teams.away.name)
 
-        const signalResult = generateSignal(homeRating, awayRating)
+        const signalResult = generateSignal(homeProjectedRating || homeRating, awayProjectedRating || awayRating)
 
         return {
           fixtureId,
@@ -151,6 +167,8 @@ console.log("API ERRORS:", data.errors)
           valueLabel: "Unavailable",
           homeRating,
           awayRating,
+          homeProjectedRating,
+          awayProjectedRating,
           hasLineups: false,
           combinedLineupTotals: null,
         }
@@ -167,5 +185,20 @@ console.log("API ERRORS:", data.errors)
       { error: `Failed to fetch matches: ${message}` },
       { status: 500 }
     )
+  }
+}
+
+async function fetchProjectedLineupRatings(fixtureId: number) {
+  try {
+    const lineups = await fetchLineups(fixtureId)
+    const ratings = (lineups as ApiLineup[]).map((lineup) => ({
+      team: lineup.team?.name || "Team",
+      rating: calculateLineupRating(lineup.startXI || []).average,
+    }))
+
+    return ratings.length > 0 ? ratings : null
+  } catch (error) {
+    console.error("PROJECTED LINEUP RATING ERROR", { fixtureId, error })
+    return null
   }
 }

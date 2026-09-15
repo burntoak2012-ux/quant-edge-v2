@@ -1,7 +1,7 @@
 import { getPlayerRating } from "./playerRatings"
 
 export type LineupPlayer = {
-  player?: { name?: string; position?: string }
+  player?: { name?: string; position?: string; pos?: string }
   name?: string
   position?: string
   starts?: boolean
@@ -25,7 +25,7 @@ export async function computeTeamTotals(players: LineupPlayer[]) {
 
   const resolved = players.map((item) => {
     const name = item.player?.name || item.name || "Unknown Player"
-    const position = item.position || item.player?.position || "MID"
+    const position = item.position || item.player?.position || item.player?.pos || "MID"
     const isStarter = item.starts ?? true
     const rating = getPlayerRating(name, {
       position,

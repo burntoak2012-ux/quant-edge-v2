@@ -24,6 +24,8 @@ type Match = {
   valueLabel: string
   homeRating: number
   awayRating: number
+  homeProjectedRating: number | null
+  awayProjectedRating: number | null
   hasLineups: boolean
   combinedLineupTotals?: { combinedTotal: number } | null
 }

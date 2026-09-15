@@ -21,6 +21,8 @@ type Props = {
   valueLabel: string
   homeRating: number
   awayRating: number
+  homeProjectedRating: number | null
+  awayProjectedRating: number | null
   combinedLineupTotal?: number
 }
 
@@ -42,6 +44,8 @@ export default function SignalCard({
   valueLabel,
   homeRating,
   awayRating,
+  homeProjectedRating,
+  awayProjectedRating,
   combinedLineupTotal,
 }: Props) {
   const [showHelp, setShowHelp] = useState(false)
@@ -145,17 +149,15 @@ export default function SignalCard({
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs">
-            Home Rating
-          </p>
-          <p>{homeRating}</p>
+          <p className="text-gray-400 text-xs">Home rating</p>
+          <p className="font-semibold">{homeRating}</p>
+          <p className="mt-1 text-xs text-lime-300">XI {homeProjectedRating ?? "Pending"}</p>
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs">
-            Away Rating
-          </p>
-          <p>{awayRating}</p>
+          <p className="text-gray-400 text-xs">Away rating</p>
+          <p className="font-semibold">{awayRating}</p>
+          <p className="mt-1 text-xs text-lime-300">XI {awayProjectedRating ?? "Pending"}</p>
         </div>
       </div>
 

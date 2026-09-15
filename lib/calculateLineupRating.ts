@@ -13,7 +13,7 @@ export function calculateLineupRating(players: LineupPlayer[]) {
 
   const playerBreakdown = players.map((item) => {
     const name = item.player?.name || item.name || "Unknown Player"
-    const position = item.position || item.player?.position || "MID"
+    const position = item.position || item.player?.position || item.player?.pos || "MID"
     const isStarter = item.starts ?? true
     const rating = getPlayerRating(name, {
       position,

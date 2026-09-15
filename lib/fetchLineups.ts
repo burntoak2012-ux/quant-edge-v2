@@ -10,7 +10,7 @@ export async function fetchLineups(fixtureId: number, opts?: { home?: string; aw
         headers: {
           "x-apisports-key": API_KEY || "",
         },
-        cache: "no-store",
+        next: { revalidate: 900 },
       }
     )
 
