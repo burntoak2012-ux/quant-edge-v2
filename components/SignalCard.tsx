@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 type Props = {
   fixtureId: number
@@ -54,6 +55,7 @@ export default function SignalCard({
   awayProjectedRating,
   combinedLineupTotal,
 }: Props) {
+  const router = useRouter()
   const [showHelp, setShowHelp] = useState(false)
   const signalColor =
     signal === "HOME WIN"
@@ -80,14 +82,26 @@ export default function SignalCard({
         : "No clear edge"
 
   return (
-    <div className="qe-panel qe-reveal rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-7">
+    <div
+      aria-label={`Open match brief for ${homeTeam} versus ${awayTeam}`}
+      className="qe-panel qe-reveal cursor-pointer rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-7"
+      onClick={() => router.push(`/fixtures/${fixtureId}?home=${homeTeamId}&away=${awayTeamId}&league=${leagueId}&homeRating=${homeProjectedRating || homeRating}&awayRating=${awayProjectedRating || awayRating}`)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          router.push(`/fixtures/${fixtureId}?home=${homeTeamId}&away=${awayTeamId}&league=${leagueId}&homeRating=${homeProjectedRating || homeRating}&awayRating=${awayProjectedRating || awayRating}`)
+        }
+      }}
+      role="link"
+      tabIndex={0}
+    >
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">{leagueName}</p>
           <h2 className="text-2xl font-bold">
-            <Link className="hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`}>{homeTeam}</Link>
+            <Link className="hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{homeTeam}</Link>
             <span className="text-slate-500"> vs </span>
-            <Link className="hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`}>{awayTeam}</Link>
+            <Link className="hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{awayTeam}</Link>
           </h2>
           <p className="mt-2 text-xs text-slate-400">
             {kickoff ? new Date(kickoff).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Kickoff unavailable"}
@@ -100,7 +114,10 @@ export default function SignalCard({
           aria-expanded={showHelp}
           aria-label="Explain dashboard values"
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-600 text-sm font-bold text-cyan-300 hover:border-cyan-300 hover:bg-cyan-400/10"
-          onClick={() => setShowHelp((visible) => !visible)}
+          onClick={(event) => {
+            event.stopPropagation()
+            setShowHelp((visible) => !visible)
+          }}
           title="Explain dashboard values"
           type="button"
         >
@@ -176,6 +193,8 @@ export default function SignalCard({
 
       <div className="border-t border-slate-800 pt-4 text-xs text-slate-500">
         <span>Fixture #{fixtureId}</span>
+        <span className="mx-2 text-slate-700">•</span>
+        <span className="text-cyan-300">Open match brief</span>
         <span className="mx-2 text-slate-700">•</span>
         <span>Use this as research, not a betting instruction.</span>
       </div>
