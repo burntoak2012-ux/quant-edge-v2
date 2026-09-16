@@ -1,5 +1,3 @@
-import axios from "axios"
-
 const API_KEY = process.env.API_FOOTBALL_KEY
 
 type OddsValue = {
@@ -28,15 +26,17 @@ export async function fetchMatchOdds(fixtureId: number): Promise<MatchOdds | nul
   if (!API_KEY) return null
 
   try {
-    const response = await axios.get<OddsResponse>(
-      "https://v3.football.api-sports.io/odds",
+    const response = await fetch(
+      `https://v3.football.api-sports.io/odds?fixture=${fixtureId}`,
       {
         headers: { "x-apisports-key": API_KEY },
-        params: { fixture: fixtureId },
-      }
+        next: { revalidate: 900 },
+      },
     )
+    if (!response.ok) return null
 
-    const bookmaker = response.data.response?.[0]?.bookmakers?.[0]
+    const data = await response.json() as OddsResponse
+    const bookmaker = data.response?.[0]?.bookmakers?.[0]
     const market = bookmaker?.bets?.find((bet) => bet.name === "Match Winner")
     const values = market?.values || []
     const getOdd = (name: string) => {

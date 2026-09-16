@@ -4,6 +4,7 @@ import { teamRatings } from "@/lib/teamRatings"
 import { calculateTeamRating } from "@/lib/calculateTeamRating"
 import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { fetchLineups } from "@/lib/fetchLineups"
+import { fetchMatchOdds } from "@/lib/fetchMatchOdds"
 import type { ApiLineup } from "@/lib/lineupUtils"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 
@@ -137,6 +138,9 @@ console.log("API ERRORS:", data.errors)
     const projectedLineupEntries = await Promise.all(
       selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(item.fixture.id))
     )
+    const oddsEntries = await Promise.all(
+      selectedFixtures.map((item: Fixture) => fetchMatchOdds(item.fixture.id))
+    )
 
     const matches = await Promise.all(
       selectedFixtures.map(async (item: Fixture, index: number) => {
@@ -146,8 +150,18 @@ console.log("API ERRORS:", data.errors)
         const projectedLineups = projectedLineupEntries[index]
         const homeProjectedRating = findProjectedRating(projectedLineups, item.teams.home.name)
         const awayProjectedRating = findProjectedRating(projectedLineups, item.teams.away.name)
+        const matchOdds = oddsEntries[index]
 
         const signalResult = generateSignal(homeProjectedRating || homeRating, awayProjectedRating || awayRating)
+        const selectedOdds = signalResult.signal === "HOME WIN"
+          ? matchOdds?.home
+          : signalResult.signal === "AWAY WIN"
+            ? matchOdds?.away
+            : null
+        const impliedProbability = selectedOdds ? 1 / selectedOdds : null
+        const valuePercent = impliedProbability
+          ? Math.round((signalResult.confidence / 100 - impliedProbability) * 100)
+          : null
 
         return {
           fixtureId,
@@ -162,9 +176,15 @@ console.log("API ERRORS:", data.errors)
           awayTeam: item.teams.away.name,
           signal: signalResult.signal,
           confidence: signalResult.confidence,
-          odds: null,
-          valuePercent: null,
-          valueLabel: "Unavailable",
+          odds: selectedOdds ? selectedOdds.toFixed(2) : null,
+          valuePercent,
+          valueLabel: valuePercent === null
+            ? "Unavailable"
+            : valuePercent >= 5
+              ? "Potential value"
+              : valuePercent <= -5
+                ? "Potentially overpriced"
+                : "Fairly priced",
           homeRating,
           awayRating,
           homeProjectedRating,
