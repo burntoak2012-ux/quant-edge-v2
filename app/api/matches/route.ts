@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
-import { generateSignal } from "@/lib/generateSignal"
 import { teamRatings } from "@/lib/teamRatings"
 import { calculateTeamRating } from "@/lib/calculateTeamRating"
+import { calculateMatchProbabilities } from "@/lib/matchProbability"
 import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { fetchLineups } from "@/lib/fetchLineups"
 import { fetchMatchOdds } from "@/lib/fetchMatchOdds"
 import type { ApiLineup } from "@/lib/lineupUtils"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
+import { supabase } from "@/lib/supabaseClient"
 
 export const dynamic = "force-dynamic"
 
@@ -34,6 +35,7 @@ type Fixture = {
     home: { id: number; name: string }
     away: { id: number; name: string }
   }
+  goals?: { home?: number | null; away?: number | null }
 }
 
 type TeamStatsResponse = {
@@ -152,15 +154,19 @@ console.log("API ERRORS:", data.errors)
         const awayProjectedRating = findProjectedRating(projectedLineups, item.teams.away.name)
         const matchOdds = oddsEntries[index]
 
-        const signalResult = generateSignal(homeProjectedRating || homeRating, awayProjectedRating || awayRating)
-        const selectedOdds = signalResult.signal === "HOME WIN"
+        const signalHomeRating = homeProjectedRating || homeRating
+        const signalAwayRating = awayProjectedRating || awayRating
+        const probabilities = calculateMatchProbabilities(signalHomeRating, signalAwayRating)
+        const selectedOdds = probabilities.predictedOutcome === "HOME WIN"
           ? matchOdds?.home
-          : signalResult.signal === "AWAY WIN"
+          : probabilities.predictedOutcome === "DRAW"
+            ? matchOdds?.draw
+            : probabilities.predictedOutcome === "AWAY WIN"
             ? matchOdds?.away
             : null
         const impliedProbability = selectedOdds ? 1 / selectedOdds : null
         const valuePercent = impliedProbability
-          ? Math.round((signalResult.confidence / 100 - impliedProbability) * 100)
+          ? Math.round((probabilities.confidence / 100 - impliedProbability) * 100)
           : null
 
         return {
@@ -174,8 +180,11 @@ console.log("API ERRORS:", data.errors)
           homeTeam: item.teams.home.name,
           awayTeamId: item.teams.away.id,
           awayTeam: item.teams.away.name,
-          signal: signalResult.signal,
-          confidence: signalResult.confidence,
+          signal: probabilities.predictedOutcome,
+          confidence: probabilities.confidence,
+          homeProbability: probabilities.home,
+          drawProbability: probabilities.draw,
+          awayProbability: probabilities.away,
           odds: selectedOdds ? selectedOdds.toFixed(2) : null,
           valuePercent,
           valueLabel: valuePercent === null
@@ -194,6 +203,49 @@ console.log("API ERRORS:", data.errors)
         }
       })
     )
+
+    if (supabase && matches.length > 0) {
+      const predictionRows = matches.map((match) => ({
+        ...(() => {
+          const fixture = selectedFixtures.find((item: Fixture) => item.fixture.id === match.fixtureId)
+          const isFinished = ["FT", "AET", "PEN"].includes(fixture?.fixture.status?.short || "")
+          const hasScore = fixture?.goals?.home !== null && fixture?.goals?.home !== undefined
+            && fixture.goals.away !== null && fixture.goals.away !== undefined
+          return {
+            actual_home_goals: hasScore ? fixture?.goals?.home : null,
+            actual_away_goals: hasScore ? fixture?.goals?.away : null,
+            outcome_status: isFinished && hasScore ? "settled" : "pending",
+            settled_at: isFinished && hasScore ? new Date().toISOString() : null,
+          }
+        })(),
+        fixture_id: match.fixtureId,
+        fixture_date: match.kickoff,
+        league_id: match.leagueId,
+        home_team_id: match.homeTeamId,
+        home_team: match.homeTeam,
+        away_team_id: match.awayTeamId,
+        away_team: match.awayTeam,
+        home_rating: match.homeRating,
+        away_rating: match.awayRating,
+        home_projected_rating: match.homeProjectedRating,
+        away_projected_rating: match.awayProjectedRating,
+        home_probability: match.homeProbability,
+        draw_probability: match.drawProbability,
+        away_probability: match.awayProbability,
+        predicted_outcome: match.signal,
+        confidence: match.confidence,
+        bookmaker_odds: match.odds ? Number(match.odds) : null,
+        value_percent: match.valuePercent,
+      }))
+
+      const { error: predictionError } = await supabase
+        .from("prediction_snapshots")
+        .upsert(predictionRows, { onConflict: "fixture_id" })
+
+      if (predictionError) {
+        console.warn("Prediction snapshot unavailable", predictionError.message)
+      }
+    }
 
     return NextResponse.json(matches, {
       headers: { "Cache-Control": "no-store, max-age=0" },

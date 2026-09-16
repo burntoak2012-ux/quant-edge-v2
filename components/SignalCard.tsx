@@ -16,6 +16,9 @@ type Props = {
   awayTeam: string
   signal: string
   confidence: number
+  homeProbability: number
+  drawProbability: number
+  awayProbability: number
   odds: string | null
   valuePercent: number | null
   valueLabel: string
@@ -39,6 +42,9 @@ export default function SignalCard({
   awayTeam,
   signal,
   confidence,
+  homeProbability,
+  drawProbability,
+  awayProbability,
   odds,
   valuePercent,
   valueLabel,
@@ -99,7 +105,7 @@ export default function SignalCard({
           <p className="font-semibold text-cyan-200">How to read these values</p>
           <ul className="mt-2 space-y-1.5">
             <li><strong className="text-white">Signal:</strong> HOME WIN or AWAY WIN means the rating gap is at least 5 points; PASS means the edge is smaller.</li>
-            <li><strong className="text-white">Confidence / Win Probability:</strong> 50% for PASS, otherwise 55% to 95% based on the rating gap. This is a model estimate, not a guarantee.</li>
+            <li><strong className="text-white">Probabilities:</strong> normalized home, draw, and away estimates from the rating model. They are model estimates, not guarantees.</li>
             <li><strong className="text-white">Team ratings:</strong> internal ratings shown on a 0 to 100 scale.</li>
             <li><strong className="text-white">Odds:</strong> the displayed decimal market odds from the first available bookmaker.</li>
             <li><strong className="text-white">Value:</strong> model probability minus the odds-implied probability. At least +5 points is potential value; at most -5 points is potentially overpriced.</li>
@@ -132,7 +138,8 @@ export default function SignalCard({
           <p className="text-gray-400 text-xs">
             Win Probability
           </p>
-          <p>{confidence}%</p>
+          <p>{Math.max(homeProbability, drawProbability, awayProbability)}%</p>
+          <p className="mt-1 text-[10px] text-slate-500">H {homeProbability} / D {drawProbability} / A {awayProbability}</p>
         </div>
 
         <div>

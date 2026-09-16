@@ -19,6 +19,9 @@ type Match = {
   awayTeam: string
   signal: string
   confidence: number
+  homeProbability: number
+  drawProbability: number
+  awayProbability: number
   odds: string | null
   valuePercent: number | null
   valueLabel: string

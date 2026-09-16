@@ -18,6 +18,7 @@ Getting this SaaS live — quick deploy checklist
   psql "postgresql://<DB_USER>:<DB_PASS>@<DB_HOST>:<DB_PORT>/<DB_NAME>" -f db/seeds/001_seed_sample.sql
   ```
 - Or use Supabase UI: SQL Editor → run migration and seed SQL.
+- Run `db/migrations/002_create_prediction_snapshots.sql` as well. This stores model probabilities and later actual results so calibration and ROI can be measured.
 
 3) Stripe
 

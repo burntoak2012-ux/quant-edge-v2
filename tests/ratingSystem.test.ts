@@ -5,6 +5,7 @@ import { calculateLineupRating } from "../lib/calculateLineupRating"
 import { calculateTeamRating } from "../lib/calculateTeamRating"
 import { getPlayerRating } from "../lib/playerRatings"
 import { calculateQuantPlayerRating, calculateQuantTeamRating } from "../lib/quantRating"
+import { calculateMatchProbabilities } from "../lib/matchProbability"
 
 test("player rating should use a weighted internal form instead of raw static values", () => {
   const elite = getPlayerRating("Kylian Mbappe", { position: "FWD", isStarter: true, form: 86, minutes: 2200 })
@@ -73,6 +74,15 @@ test("quant player rating should not invent form from a player's name", () => {
 test("quant player rating stays within the 60 to 99 product scale", () => {
   assert.ok(calculateQuantPlayerRating({ baseRating: 99, form: 99, performanceRating: 99, minutes: 3000, appearances: 35, isStarter: true }) <= 99)
   assert.ok(calculateQuantPlayerRating({ baseRating: 55, form: 55, performanceRating: 55, minutes: 0, appearances: 0, isStarter: false }) >= 60)
+})
+
+test("match probabilities are normalized and reward home advantage", () => {
+  const probabilities = calculateMatchProbabilities(80, 80)
+  const total = probabilities.home + probabilities.draw + probabilities.away
+
+  assert.ok(total >= 99 && total <= 101)
+  assert.ok(probabilities.home > probabilities.away)
+  assert.ok(probabilities.confidence >= probabilities.home)
 })
 
 test("lineup rating should reward starters and stronger role balance", () => {
