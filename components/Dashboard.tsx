@@ -111,6 +111,9 @@ export default function Dashboard() {
               <Link className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-cyan-400 hover:text-white" href="/account">
                 Account
               </Link>
+              <Link className="rounded-lg border border-lime-300/40 px-3 py-2 text-sm text-lime-200 hover:bg-lime-300/10" href="/performance">
+                Performance
+              </Link>
               <UserButton />
             </div>
           </div>
