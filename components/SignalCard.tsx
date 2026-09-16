@@ -71,6 +71,14 @@ export default function SignalCard({
       ? "text-yellow-400"
       : "text-orange-400"
 
+  const modelView = signal === "HOME WIN"
+    ? "Home edge"
+    : signal === "AWAY WIN"
+      ? "Away edge"
+      : signal === "DRAW"
+        ? "Draw edge"
+        : "No clear edge"
+
   return (
     <div className="qe-panel qe-reveal rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-7">
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -104,7 +112,7 @@ export default function SignalCard({
         <div className="mb-5 rounded-xl border border-cyan-400/30 bg-cyan-400/5 p-4 text-sm text-slate-300">
           <p className="font-semibold text-cyan-200">How to read these values</p>
           <ul className="mt-2 space-y-1.5">
-            <li><strong className="text-white">Signal:</strong> HOME WIN or AWAY WIN means the rating gap is at least 5 points; PASS means the edge is smaller.</li>
+            <li><strong className="text-white">Model view:</strong> an analytical lean based on the current ratings, not a tip or a guarantee.</li>
             <li><strong className="text-white">Probabilities:</strong> normalized home, draw, and away estimates from the rating model. They are model estimates, not guarantees.</li>
             <li><strong className="text-white">Team ratings:</strong> internal ratings shown on a 0 to 100 scale.</li>
             <li><strong className="text-white">Odds:</strong> the displayed decimal market odds from the first available bookmaker.</li>
@@ -116,9 +124,9 @@ export default function SignalCard({
 
       <div className="mb-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-7">
         <div>
-          <p className="text-gray-400 text-xs">Signal</p>
+          <p className="text-gray-400 text-xs">Model view</p>
           <p className={`font-bold ${signalColor}`}>
-            {signal}
+            {modelView}
           </p>
         </div>
 
@@ -135,9 +143,7 @@ export default function SignalCard({
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs">
-            Win Probability
-          </p>
+          <p className="text-gray-400 text-xs">Probability split</p>
           <p>{Math.max(homeProbability, drawProbability, awayProbability)}%</p>
           <p className="mt-1 text-[10px] text-slate-500">H {homeProbability} / D {drawProbability} / A {awayProbability}</p>
         </div>
@@ -148,7 +154,7 @@ export default function SignalCard({
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs">Market view</p>
+          <p className="text-gray-400 text-xs">Market context</p>
           <p className={`font-bold ${valuePercent === null ? "text-slate-400" : valuePercent >= 5 ? "text-green-400" : valuePercent <= -5 ? "text-red-400" : "text-yellow-400"}`}>
             {valueLabel}
           </p>
@@ -170,6 +176,8 @@ export default function SignalCard({
 
       <div className="border-t border-slate-800 pt-4 text-xs text-slate-500">
         <span>Fixture #{fixtureId}</span>
+        <span className="mx-2 text-slate-700">•</span>
+        <span>Use this as research, not a betting instruction.</span>
       </div>
     </div>
   )

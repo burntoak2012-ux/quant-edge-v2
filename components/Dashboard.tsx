@@ -188,6 +188,11 @@ export default function Dashboard() {
           <p className="mt-3 text-sm text-slate-400">Showing fixtures scheduled for {new Date(`${selectedDate}T12:00:00`).toLocaleDateString([], { dateStyle: "full" })}.</p>
         </section>
 
+        <aside className="mb-8 border border-lime-300/20 bg-lime-300/5 p-4 text-sm text-slate-300">
+          <p className="font-semibold text-lime-200">Decision-support view</p>
+          <p className="mt-1">Compare probabilities, ratings, lineups, odds, and context before making your own decision. Quant Edge is not a tipping service and does not guarantee outcomes.</p>
+        </aside>
+
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">Loading today&apos;s fixtures...</div>}
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
         {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">No fixtures available today</p><p className="mt-2 text-sm text-slate-400">Check back before kickoff when lineups and player ratings become available.</p></div>}
