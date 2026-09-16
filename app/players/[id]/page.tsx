@@ -26,6 +26,10 @@ function display(value?: number | string) {
   return value === undefined || value === null || value === "" ? "-" : value
 }
 
+function formatSeason(season: number) {
+  return `${season}/${String((season + 1) % 100).padStart(2, "0")}`
+}
+
 export default async function PlayerPage({
   params,
   searchParams,
@@ -78,6 +82,11 @@ export default async function PlayerPage({
     const careerStats = careerData.response?.[0]?.statistics || []
     return careerStats.map((careerStat) => ({ season: careerSeason, ...careerStat }))
   }))).flat().filter((careerStat) => careerStat.games)
+  const careerBySeason = careerHistory.reduce<Record<number, typeof careerHistory>>((groups, careerStat) => {
+    groups[careerStat.season] = groups[careerStat.season] || []
+    groups[careerStat.season].push(careerStat)
+    return groups
+  }, {})
   const quantRating = calculateQuantPlayerRating({
     baseRating: 72,
     position: stats?.games?.position,
@@ -140,28 +149,30 @@ export default async function PlayerPage({
         <section className="mt-8 border-t border-slate-800 pt-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Career history</p>
           <h2 className="mt-2 text-2xl font-bold">Season-by-season record</h2>
-          <div className="qe-panel mt-5 overflow-x-auto rounded-2xl border">
-            {careerHistory.length > 0 ? (
-              <table className="w-full min-w-[680px] text-left text-sm">
-                <thead className="bg-slate-900 text-xs uppercase tracking-[0.12em] text-slate-500">
-                  <tr><th className="px-4 py-3">Season</th><th className="px-4 py-3">Team</th><th className="px-4 py-3">Competition</th><th className="px-4 py-3">Apps</th><th className="px-4 py-3">Minutes</th><th className="px-4 py-3">Goals</th><th className="px-4 py-3">Assists</th><th className="px-4 py-3">Rating</th></tr>
-                </thead>
-                <tbody>
-                  {careerHistory.map((careerStat, index) => (
-                    <tr className="border-t border-slate-800" key={`${careerStat.season}-${careerStat.team?.name || "team"}-${index}`}>
-                      <td className="px-4 py-3 font-semibold text-cyan-200">{careerStat.season}</td>
-                      <td className="px-4 py-3">{careerStat.team?.name || "-"}</td>
-                      <td className="px-4 py-3 text-slate-400">{careerStat.league?.name || "-"}</td>
-                      <td className="px-4 py-3">{display(careerStat.games?.appearences ?? careerStat.games?.appearances)}</td>
-                      <td className="px-4 py-3">{display(careerStat.games?.minutes)}</td>
-                      <td className="px-4 py-3">{display(careerStat.goals?.total)}</td>
-                      <td className="px-4 py-3">{display(careerStat.goals?.assists)}</td>
-                      <td className="px-4 py-3 font-semibold text-lime-200">{display(careerStat.games?.rating)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p className="p-5 text-sm text-slate-400">Career history is unavailable for this player.</p>}
+          <div className="mt-5 space-y-5">
+            {careerHistory.length > 0 ? Object.entries(careerBySeason).map(([seasonKey, seasonStats]) => (
+              <div className="qe-panel overflow-x-auto rounded-2xl border" key={seasonKey}>
+                <div className="border-b border-slate-800 bg-slate-900 px-4 py-3"><h3 className="font-semibold text-cyan-200">{formatSeason(Number(seasonKey))} season</h3></div>
+                <table className="w-full min-w-[680px] text-left text-sm">
+                  <thead className="bg-slate-900/60 text-xs uppercase tracking-[0.12em] text-slate-500">
+                    <tr><th className="px-4 py-3">Team</th><th className="px-4 py-3">Competition</th><th className="px-4 py-3">Apps</th><th className="px-4 py-3">Minutes</th><th className="px-4 py-3">Goals</th><th className="px-4 py-3">Assists</th><th className="px-4 py-3">Rating</th></tr>
+                  </thead>
+                  <tbody>
+                    {seasonStats.map((careerStat, index) => (
+                      <tr className="border-t border-slate-800" key={`${careerStat.season}-${careerStat.team?.name || "team"}-${index}`}>
+                        <td className="px-4 py-3">{careerStat.team?.name || "-"}</td>
+                        <td className="px-4 py-3 text-slate-400">{careerStat.league?.name || "-"}</td>
+                        <td className="px-4 py-3">{display(careerStat.games?.appearences ?? careerStat.games?.appearances)}</td>
+                        <td className="px-4 py-3">{display(careerStat.games?.minutes)}</td>
+                        <td className="px-4 py-3">{display(careerStat.goals?.total)}</td>
+                        <td className="px-4 py-3">{display(careerStat.goals?.assists)}</td>
+                        <td className="px-4 py-3 font-semibold text-lime-200">{display(careerStat.games?.rating)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )) : <p className="p-5 text-sm text-slate-400">Career history is unavailable for this player.</p>}
           </div>
         </section>
       </div>
