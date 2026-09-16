@@ -95,17 +95,19 @@ export default async function PlayerPage({
     return {
       ...careerStat,
       normalizedAppearances: appearances,
-      quantRating: calculateQuantPlayerRating({
-        baseRating: 72,
-        position: careerStat.games?.position,
-        form: providerRating ? providerRating * 10 : undefined,
-        performanceRating: providerRating ? providerRating * 10 : undefined,
-        minutes,
-        appearances,
-        goals: careerStat.goals?.total,
-        assists: careerStat.goals?.assists,
-        isStarter: (careerStat.games?.lineups || 0) > 0,
-      }),
+      quantRating: minutes || appearances
+        ? calculateQuantPlayerRating({
+            baseRating: 72,
+            position: careerStat.games?.position,
+            form: providerRating ? providerRating * 10 : undefined,
+            performanceRating: providerRating ? providerRating * 10 : undefined,
+            minutes,
+            appearances,
+            goals: careerStat.goals?.total,
+            assists: careerStat.goals?.assists,
+            isStarter: (careerStat.games?.lineups || 0) > 0,
+          })
+        : null,
     }
   })
   const careerBySeason = normalizedCareerHistory.reduce<Record<number, typeof normalizedCareerHistory>>((groups, careerStat) => {
@@ -195,7 +197,7 @@ export default async function PlayerPage({
                         <td className="px-4 py-3">{display(careerStat.games?.minutes)}</td>
                         <td className="px-4 py-3">{display(careerStat.goals?.total)}</td>
                         <td className="px-4 py-3">{display(careerStat.goals?.assists)}</td>
-                        <td className="px-4 py-3 font-semibold text-lime-200">{careerStat.quantRating}</td>
+                        <td className="px-4 py-3 font-semibold text-lime-200">{careerStat.quantRating ?? "-"}</td>
                       </tr>
                     ))}
                   </tbody>
