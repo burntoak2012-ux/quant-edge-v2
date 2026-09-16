@@ -87,6 +87,7 @@ export default async function PlayerPage({
     groups[careerStat.season].push(careerStat)
     return groups
   }, {})
+  const orderedCareerSeasons = Object.keys(careerBySeason).map(Number).sort((a, b) => b - a)
   const quantRating = calculateQuantPlayerRating({
     baseRating: 72,
     position: stats?.games?.position,
@@ -150,7 +151,9 @@ export default async function PlayerPage({
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Career history</p>
           <h2 className="mt-2 text-2xl font-bold">Season-by-season record</h2>
           <div className="mt-5 space-y-5">
-            {careerHistory.length > 0 ? Object.entries(careerBySeason).map(([seasonKey, seasonStats]) => (
+            {careerHistory.length > 0 ? orderedCareerSeasons.map((seasonKey) => {
+              const seasonStats = careerBySeason[seasonKey]
+              return (
               <div className="qe-panel overflow-x-auto rounded-2xl border" key={seasonKey}>
                 <div className="border-b border-slate-800 bg-slate-900 px-4 py-3"><h3 className="font-semibold text-cyan-200">{formatSeason(Number(seasonKey))} season</h3></div>
                 <table className="w-full min-w-[680px] text-left text-sm">
@@ -172,7 +175,8 @@ export default async function PlayerPage({
                   </tbody>
                 </table>
               </div>
-            )) : <p className="p-5 text-sm text-slate-400">Career history is unavailable for this player.</p>}
+              )
+            }) : <p className="p-5 text-sm text-slate-400">Career history is unavailable for this player.</p>}
           </div>
         </section>
       </div>
