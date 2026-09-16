@@ -45,6 +45,11 @@ function probabilityBar(label: string, value: number) {
   )
 }
 
+function formatEuropeanDate(value?: string) {
+  if (!value) return "-"
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value))
+}
+
 export default async function FixturePage({
   params,
   searchParams,
@@ -152,7 +157,7 @@ export default async function FixturePage({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Head to head</p>
           <h2 className="mt-2 text-2xl font-bold">Recent meetings</h2>
           <div className="qe-panel mt-5 rounded-2xl border">
-            {headToHead.length > 0 ? headToHead.map((meeting, index) => <div className="flex items-center justify-between border-b border-slate-800 p-4 text-sm last:border-b-0" key={`${meeting.fixture?.date}-${index}`}><span className="text-slate-400">{meeting.fixture?.date ? new Date(meeting.fixture.date).toLocaleDateString() : "-"}</span><span>{meeting.teams?.home?.name || "Home"} <span className="mx-2 text-slate-600">vs</span> {meeting.teams?.away?.name || "Away"}</span><span className="font-semibold text-cyan-200">{meeting.goals?.home ?? "-"} - {meeting.goals?.away ?? "-"}</span></div>) : <p className="p-5 text-sm text-slate-400">Head-to-head history is unavailable for this fixture.</p>}
+            {headToHead.length > 0 ? headToHead.map((meeting, index) => <div className="flex items-center justify-between border-b border-slate-800 p-4 text-sm last:border-b-0" key={`${meeting.fixture?.date}-${index}`}><span className="text-slate-400">{formatEuropeanDate(meeting.fixture?.date)}</span><span>{meeting.teams?.home?.name || "Home"} <span className="mx-2 text-slate-600">vs</span> {meeting.teams?.away?.name || "Away"}</span><span className="font-semibold text-cyan-200">{meeting.goals?.home ?? "-"} - {meeting.goals?.away ?? "-"}</span></div>) : <p className="p-5 text-sm text-slate-400">Head-to-head history is unavailable for this fixture.</p>}
           </div>
         </section>
       </div>
