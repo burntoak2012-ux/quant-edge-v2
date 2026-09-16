@@ -30,6 +30,12 @@ function formatSeason(season: number) {
   return `${season}/${String((season + 1) % 100).padStart(2, "0")}`
 }
 
+function normalizedAppearances(minutes?: number, appearances?: number) {
+  if (typeof appearances === "number" && appearances > 0) return appearances
+  if (typeof minutes === "number" && minutes > 0) return Math.ceil(minutes / 90)
+  return appearances ?? 0
+}
+
 export default async function PlayerPage({
   params,
   searchParams,
@@ -82,7 +88,27 @@ export default async function PlayerPage({
     const careerStats = careerData.response?.[0]?.statistics || []
     return careerStats.map((careerStat) => ({ season: careerSeason, ...careerStat }))
   }))).flat().filter((careerStat) => careerStat.games)
-  const careerBySeason = careerHistory.reduce<Record<number, typeof careerHistory>>((groups, careerStat) => {
+  const normalizedCareerHistory = careerHistory.map((careerStat) => {
+    const minutes = careerStat.games?.minutes
+    const appearances = normalizedAppearances(minutes, careerStat.games?.appearences ?? careerStat.games?.appearances)
+    const providerRating = careerStat.games?.rating ? Number(careerStat.games.rating) : undefined
+    return {
+      ...careerStat,
+      normalizedAppearances: appearances,
+      quantRating: calculateQuantPlayerRating({
+        baseRating: 72,
+        position: careerStat.games?.position,
+        form: providerRating ? providerRating * 10 : undefined,
+        performanceRating: providerRating ? providerRating * 10 : undefined,
+        minutes,
+        appearances,
+        goals: careerStat.goals?.total,
+        assists: careerStat.goals?.assists,
+        isStarter: (careerStat.games?.lineups || 0) > 0,
+      }),
+    }
+  })
+  const careerBySeason = normalizedCareerHistory.reduce<Record<number, typeof normalizedCareerHistory>>((groups, careerStat) => {
     groups[careerStat.season] = groups[careerStat.season] || []
     groups[careerStat.season].push(careerStat)
     return groups
@@ -165,11 +191,11 @@ export default async function PlayerPage({
                       <tr className="border-t border-slate-800" key={`${careerStat.season}-${careerStat.team?.name || "team"}-${index}`}>
                         <td className="px-4 py-3">{careerStat.team?.name || "-"}</td>
                         <td className="px-4 py-3 text-slate-400">{careerStat.league?.name || "-"}</td>
-                        <td className="px-4 py-3">{display(careerStat.games?.appearences ?? careerStat.games?.appearances)}</td>
+                        <td className="px-4 py-3">{careerStat.normalizedAppearances}</td>
                         <td className="px-4 py-3">{display(careerStat.games?.minutes)}</td>
                         <td className="px-4 py-3">{display(careerStat.goals?.total)}</td>
                         <td className="px-4 py-3">{display(careerStat.goals?.assists)}</td>
-                        <td className="px-4 py-3 font-semibold text-lime-200">{display(careerStat.games?.rating)}</td>
+                        <td className="px-4 py-3 font-semibold text-lime-200">{careerStat.quantRating}</td>
                       </tr>
                     ))}
                   </tbody>
