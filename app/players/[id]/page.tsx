@@ -9,6 +9,7 @@ type PlayerResponse = {
   response?: Array<{
     player?: { id?: number; name?: string; age?: number; nationality?: string; photo?: string }
     statistics?: Array<{
+      team?: { name?: string }
       league?: { name?: string }
       games?: { appearences?: number; appearances?: number; lineups?: number; minutes?: number; position?: string; rating?: string }
       goals?: { total?: number; assists?: number }
@@ -18,6 +19,8 @@ type PlayerResponse = {
     }>
   }>
 }
+
+type SeasonsResponse = { response?: number[] }
 
 function display(value?: number | string) {
   return value === undefined || value === null || value === "" ? "-" : value
@@ -60,6 +63,21 @@ export default async function PlayerPage({
   const player = entry?.player
   const stats = entry?.statistics?.[0]
   if (!player?.name) notFound()
+  const seasonsResponse = await fetch(`${API_URL}/players/seasons?player=${playerId}`, {
+    headers: { "x-apisports-key": apiKey },
+    next: { revalidate: 86400 },
+  })
+  const seasonData = await seasonsResponse.json() as SeasonsResponse
+  const careerSeasons = (seasonData.response || []).filter((value) => value <= season).slice(-8).reverse()
+  const careerHistory = (await Promise.all(careerSeasons.map(async (careerSeason) => {
+    const response = await fetch(`${API_URL}/players?id=${playerId}&season=${careerSeason}`, {
+      headers: { "x-apisports-key": apiKey },
+      next: { revalidate: 86400 },
+    })
+    const careerData = await response.json() as PlayerResponse
+    const careerStats = careerData.response?.[0]?.statistics || []
+    return careerStats.map((careerStat) => ({ season: careerSeason, ...careerStat }))
+  }))).flat().filter((careerStat) => careerStat.games)
   const quantRating = calculateQuantPlayerRating({
     baseRating: 72,
     position: stats?.games?.position,
@@ -116,6 +134,34 @@ export default async function PlayerPage({
                 <p className="mt-2 text-2xl font-semibold">{display(value)}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="mt-8 border-t border-slate-800 pt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Career history</p>
+          <h2 className="mt-2 text-2xl font-bold">Season-by-season record</h2>
+          <div className="qe-panel mt-5 overflow-x-auto rounded-2xl border">
+            {careerHistory.length > 0 ? (
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <thead className="bg-slate-900 text-xs uppercase tracking-[0.12em] text-slate-500">
+                  <tr><th className="px-4 py-3">Season</th><th className="px-4 py-3">Team</th><th className="px-4 py-3">Competition</th><th className="px-4 py-3">Apps</th><th className="px-4 py-3">Minutes</th><th className="px-4 py-3">Goals</th><th className="px-4 py-3">Assists</th><th className="px-4 py-3">Rating</th></tr>
+                </thead>
+                <tbody>
+                  {careerHistory.map((careerStat, index) => (
+                    <tr className="border-t border-slate-800" key={`${careerStat.season}-${careerStat.team?.name || "team"}-${index}`}>
+                      <td className="px-4 py-3 font-semibold text-cyan-200">{careerStat.season}</td>
+                      <td className="px-4 py-3">{careerStat.team?.name || "-"}</td>
+                      <td className="px-4 py-3 text-slate-400">{careerStat.league?.name || "-"}</td>
+                      <td className="px-4 py-3">{display(careerStat.games?.appearences ?? careerStat.games?.appearances)}</td>
+                      <td className="px-4 py-3">{display(careerStat.games?.minutes)}</td>
+                      <td className="px-4 py-3">{display(careerStat.goals?.total)}</td>
+                      <td className="px-4 py-3">{display(careerStat.goals?.assists)}</td>
+                      <td className="px-4 py-3 font-semibold text-lime-200">{display(careerStat.games?.rating)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <p className="p-5 text-sm text-slate-400">Career history is unavailable for this player.</p>}
           </div>
         </section>
       </div>
