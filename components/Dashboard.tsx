@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import SignalCard from "@/components/SignalCard"
 import { LEAGUES } from "@/lib/leagues"
+import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
 
 type Match = {
   fixtureId: number
@@ -35,6 +36,7 @@ type Match = {
 
 export default function Dashboard() {
   const { user } = useUser()
+  const { t } = useLanguage()
   const [matches, setMatches] = useState<Match[]>([])
   const [updatedAt, setUpdatedAt] = useState("")
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,7 @@ export default function Dashboard() {
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300">Quant Edge / Match intelligence</p>
-              <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">Today&apos;s edge<span className="text-lime-300">.</span></h1>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">{t.todayEdge}<span className="text-lime-300">.</span></h1>
             </div>
 
             <div className="flex items-center gap-3">
@@ -114,6 +116,7 @@ export default function Dashboard() {
               <Link className="rounded-lg border border-lime-300/40 px-3 py-2 text-sm text-lime-200 hover:bg-lime-300/10" href="/performance">
                 Performance
               </Link>
+              <LanguageSelector />
               <UserButton />
             </div>
           </div>
@@ -124,8 +127,8 @@ export default function Dashboard() {
               <p className="mt-2 text-xl font-semibold text-cyan-300">Live</p>
             </div>
             <div className="qe-panel rounded-2xl border p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Focus</p>
-              <p className="mt-2 text-xl font-semibold text-white">{visibleMatches.length || 0} fixtures</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t.focus}</p>
+              <p className="mt-2 text-xl font-semibold text-white">{visibleMatches.length || 0} {t.fixtures}</p>
             </div>
             <div className="qe-panel rounded-2xl border p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Welcome</p>
@@ -142,7 +145,7 @@ export default function Dashboard() {
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search fixtures"
+                placeholder={t.searchFixtures}
                 type="search"
                 value={searchQuery}
               />
@@ -158,7 +161,7 @@ export default function Dashboard() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Competition hub</p>
-              <h2 className="mt-2 text-2xl font-bold">Browse leagues</h2>
+              <h2 className="mt-2 text-2xl font-bold">{t.browseLeagues}</h2>
             </div>
             <Link className="text-sm text-cyan-300 hover:text-cyan-200" href="/leagues">View all</Link>
           </div>
@@ -177,7 +180,7 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Fixture calendar</p>
-              <h2 className="mt-2 text-2xl font-bold">Choose a match date</h2>
+              <h2 className="mt-2 text-2xl font-bold">{t.chooseDate}</h2>
             </div>
             <div className="flex items-center gap-2">
               <button aria-label="Previous date" className="h-10 w-10 border border-slate-700 text-lg text-slate-200 hover:border-cyan-300" onClick={() => shiftDate(-1)} type="button">&larr;</button>
@@ -189,14 +192,14 @@ export default function Dashboard() {
         </section>
 
         <aside className="mb-8 border border-lime-300/20 bg-lime-300/5 p-4 text-sm text-slate-300">
-          <p className="font-semibold text-lime-200">Decision-support view</p>
-          <p className="mt-1">Compare probabilities, ratings, lineups, odds, and context before making your own decision. Quant Edge is not a tipping service and does not guarantee outcomes.</p>
+          <p className="font-semibold text-lime-200">{t.decisionSupport}</p>
+          <p className="mt-1">{t.decisionSupportCopy}</p>
         </aside>
 
-        {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">Loading today&apos;s fixtures...</div>}
+        {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">{t.loadingFixtures}</div>}
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
-        {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">No fixtures available today</p><p className="mt-2 text-sm text-slate-400">Check back before kickoff when lineups and player ratings become available.</p></div>}
-        {!loading && !error && matches.length > 0 && visibleMatches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">No matching fixtures</p><p className="mt-2 text-sm text-slate-400">Try a different team name.</p></div>}
+        {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">{t.noFixtures}</p><p className="mt-2 text-sm text-slate-400">{t.checkBack}</p></div>}
+        {!loading && !error && matches.length > 0 && visibleMatches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">{t.noMatching}</p><p className="mt-2 text-sm text-slate-400">{t.tryDifferent}</p></div>}
         {!loading && !error && visibleMatches.length > 0 && <div className="grid gap-5">{visibleMatches.map((match) => <SignalCard key={match.fixtureId} {...match} combinedLineupTotal={match.combinedLineupTotals?.combinedTotal} />)}</div>}
       </div>
     </main>

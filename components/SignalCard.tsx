@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useLanguage } from "@/components/LanguageProvider"
 
 type Props = {
   fixtureId: number
@@ -56,6 +57,7 @@ export default function SignalCard({
   combinedLineupTotal,
 }: Props) {
   const router = useRouter()
+  const { t } = useLanguage()
   const [showHelp, setShowHelp] = useState(false)
   const signalColor =
     signal === "HOME WIN"
@@ -141,15 +143,15 @@ export default function SignalCard({
 
       <div className="mb-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-7">
         <div>
-          <p className="text-gray-400 text-xs">Model view</p>
+          <p className="text-gray-400 text-xs">{t.decisionSupport}</p>
           <p className={`font-bold ${signalColor}`}>
             {modelView}
           </p>
         </div>
 
         <div>
-          <p className="text-xs text-slate-500">Lineup total</p>
-          <p>{combinedLineupTotal ?? "Pending"}</p>
+          <p className="text-xs text-slate-500">{t.lineupTotal}</p>
+          <p>{combinedLineupTotal ?? t.pending}</p>
         </div>
 
         <div>
@@ -166,12 +168,12 @@ export default function SignalCard({
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs">Odds</p>
-          <p>{odds ?? "Unavailable"}</p>
+          <p className="text-gray-400 text-xs">{t.odds}</p>
+          <p>{odds ?? t.unavailable}</p>
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs">Market context</p>
+          <p className="text-gray-400 text-xs">{t.marketContext}</p>
           <p className={`font-bold ${valuePercent === null ? "text-slate-400" : valuePercent >= 5 ? "text-green-400" : valuePercent <= -5 ? "text-red-400" : "text-yellow-400"}`}>
             {valueLabel}
           </p>

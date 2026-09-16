@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { LanguageSelector } from "@/components/LanguageProvider"
 
 export default function Home() {
   return (
@@ -6,7 +7,7 @@ export default function Home() {
       <div className="mx-auto flex min-h-[85vh] max-w-6xl flex-col justify-between">
         <nav className="flex items-center justify-between">
           <span className="text-sm font-bold tracking-[0.18em] text-cyan-200">QUANT EDGE</span>
-          <Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-slate-200 hover:border-cyan-200 hover:bg-cyan-200/10" href="/sign-in">Sign in</Link>
+          <div className="flex items-center gap-3"><LanguageSelector /><Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-slate-200 hover:border-cyan-200 hover:bg-cyan-200/10" href="/sign-in">Sign in</Link></div>
         </nav>
         <section className="max-w-3xl py-20">
           <p className="mb-5 text-xs font-semibold uppercase tracking-[0.28em] text-lime-300">Football intelligence for sharper decisions</p>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 const displaySans = Space_Grotesk({
   variable: "--font-geist-sans",
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
-          {children}
+          <LanguageProvider>{children}</LanguageProvider>
         </ClerkProvider>
       </body>
     </html>
