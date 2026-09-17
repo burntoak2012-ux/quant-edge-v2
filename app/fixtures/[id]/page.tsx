@@ -28,7 +28,10 @@ type HeadToHeadFixture = { fixture?: { date?: string; status?: { short?: string 
 type HeadToHeadResponse = { response?: HeadToHeadFixture[] }
 type MatchStatistic = { type?: string; value?: string | number | null }
 type LiveStatisticResponse = { response?: Array<{ team?: { name?: string }; statistics?: MatchStatistic[] }> }
-type LineupResponse = { response?: Array<{ team?: { name?: string }; formation?: string; startXI?: Array<{ player?: { name?: string }; position?: string }> }> }
+type LineupPlayer = { player?: { name?: string; pos?: string; grid?: string }; position?: string }
+type LineupResponse = { response?: Array<{ team?: { name?: string }; formation?: string; startXI?: LineupPlayer[] }> }
+type MatchEvent = { time?: { elapsed?: number | null; extra?: number | null }; team?: { name?: string }; player?: { name?: string }; assist?: { name?: string | null }; type?: string; detail?: string; comments?: string | null }
+type EventsResponse = { response?: MatchEvent[] }
 
 async function fetchTeamStats(teamId: number, leagueId: number, apiKey: string) {
   for (const season of [new Date().getUTCFullYear(), 2024]) {
@@ -51,6 +54,20 @@ function probabilityBar(label: string, value: number) {
 function formatEuropeanDate(value?: string) {
   if (!value) return "-"
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value))
+}
+
+function eventSymbol(event: MatchEvent) {
+  if (event.type === "Goal") return "GOAL"
+  if (event.type === "Card") return event.detail?.includes("Red") ? "RED" : "YELLOW"
+  if (event.type === "subst") return "SUB"
+  if (event.type === "VAR") return "VAR"
+  return event.type || "EVENT"
+}
+
+function pitchPosition(grid?: string) {
+  const [row, column] = grid?.split(":").map(Number) || []
+  if (!row || !column) return null
+  return { top: `${((row - 1) / 10) * 88 + 6}%`, left: `${((column - 1) / 6) * 82 + 9}%` }
 }
 
 function compileResearchBrief({
@@ -117,12 +134,13 @@ export default async function FixturePage({
 
   const probabilities = calculateMatchProbabilities(Number(homeRating) || 70, Number(awayRating) || 70)
   const leagueId = Number(league) || 0
-  const [homeStats, awayStats, headToHeadResponse, liveStatsResponse, lineupsResponse] = await Promise.all([
+  const [homeStats, awayStats, headToHeadResponse, liveStatsResponse, lineupsResponse, eventsResponse] = await Promise.all([
     leagueId ? fetchTeamStats(homeId, leagueId, apiKey) : Promise.resolve(null),
     leagueId ? fetchTeamStats(awayId, leagueId, apiKey) : Promise.resolve(null),
     fetch(`${API_URL}/fixtures/headtohead?h2h=${homeId}-${awayId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 21600 } }).then((result) => result.json() as Promise<HeadToHeadResponse>).catch(() => null),
     fetch(`${API_URL}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LiveStatisticResponse>).catch(() => null),
     fetch(`${API_URL}/fixtures/lineups?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LineupResponse>).catch(() => null),
+    fetch(`${API_URL}/fixtures/events?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<EventsResponse>).catch(() => null),
   ])
   const homeTeamStats = homeStats
   const awayTeamStats = awayStats
@@ -144,6 +162,7 @@ export default async function FixturePage({
   const awayLiveStats = liveStats.find((entry) => entry.team?.name === awayName)?.statistics || []
   const liveStatTypes = Array.from(new Set([...homeLiveStats, ...awayLiveStats].map((stat) => stat.type).filter(Boolean)))
   const lineups = lineupsResponse?.response || []
+  const events = eventsResponse?.response || []
   const researchNotes = compileResearchBrief({
     homeName,
     awayName,
@@ -220,6 +239,20 @@ export default async function FixturePage({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Team sheets</p>
             <h2 className="mt-2 text-2xl font-bold">Confirmed lineups</h2>
             {lineups.length > 0 ? <div className="mt-5 space-y-5">{lineups.map((lineup) => <div key={lineup.team?.name}><p className="font-semibold text-white">{lineup.team?.name || "Team"} <span className="ml-2 text-xs font-normal text-slate-500">{lineup.formation || "Formation unavailable"}</span></p><p className="mt-2 text-sm leading-7 text-slate-300">{lineup.startXI?.map((player) => player.player?.name).filter(Boolean).join(" · ") || "Starting XI unavailable"}</p></div>)}</div> : <p className="mt-5 text-sm text-slate-400">Confirmed lineups will appear here when published.</p>}
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="qe-panel rounded-2xl border p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Lineup board</p>
+            <h2 className="mt-2 text-2xl font-bold">Formation pitch</h2>
+            {lineups.length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{lineups.map((lineup) => <div key={lineup.team?.name}><p className="mb-2 text-sm font-semibold">{lineup.team?.name} <span className="text-xs font-normal text-slate-500">{lineup.formation}</span></p><div className="relative aspect-[3/5] overflow-hidden rounded-xl border border-lime-300/30 bg-emerald-900/70" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px)", backgroundSize: "100% 20%, 25% 100%" }}>{lineup.startXI?.map((player, index) => { const position = pitchPosition(player.player?.grid); return position ? <span className="absolute -translate-x-1/2 -translate-y-1/2 text-center" key={`${player.player?.name}-${index}`} style={position}><span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-cyan-300 text-[10px] font-bold text-slate-950">{player.player?.pos || "?"}</span><span className="mt-1 block max-w-16 truncate text-[9px] font-semibold text-white">{player.player?.name}</span></span> : null })}</div></div>)}</div> : <p className="mt-5 text-sm text-slate-400">Formation pitch will appear when confirmed XI coordinates are published.</p>}
+          </div>
+
+          <div className="qe-panel rounded-2xl border p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Live timeline</p>
+            <h2 className="mt-2 text-2xl font-bold">Match events</h2>
+            {events.length > 0 ? <div className="mt-5 max-h-[520px] space-y-3 overflow-y-auto pr-1">{events.map((event, index) => <div className="border-l-2 border-cyan-300 pl-3 text-sm" key={`${event.time?.elapsed}-${event.type}-${index}`}><div className="flex justify-between gap-3"><span className="font-semibold text-cyan-100">{event.time?.elapsed ?? "-"}&apos;</span><span className="text-xs text-lime-200">{eventSymbol(event)}</span></div><p className="mt-1 font-medium">{event.player?.name || event.team?.name || "Match event"}</p><p className="mt-1 text-xs text-slate-400">{event.team?.name}{event.assist?.name ? ` · Assist: ${event.assist.name}` : ""}{event.comments ? ` · ${event.comments}` : ""}</p></div>)}</div> : <p className="mt-5 text-sm text-slate-400">Goals, cards, substitutions, and other live events will appear here when published.</p>}
           </div>
         </section>
 
