@@ -50,6 +50,11 @@ export default function PricingPage() {
         <h2 className="text-xl font-semibold">Pro</h2>
         <p className="mt-3 text-4xl font-bold text-lime-300">£9.99<span className="text-base font-medium text-slate-400"> / month</span></p>
         <p className="mt-2 text-sm text-slate-400">Live signals and lineup totals, billed monthly.</p>
+        <div className="mt-5 border-y border-cyan-100/10 py-4 text-sm leading-6 text-slate-300">
+          <p className="font-semibold text-cyan-100">Football research, not betting tips.</p>
+          <p className="mt-1">Quant Edge provides data, probabilities, ratings, and match context to support your own decisions. It does not provide betting advice, guarantee outcomes, or promise profits.</p>
+          <p className="mt-3 text-lime-200">14-day refund policy. Cancel anytime.</p>
+        </div>
         <div className="mt-4">
           <button
             className="rounded-lg bg-cyan-300 px-4 py-2 font-semibold text-slate-950 disabled:opacity-50"
@@ -59,6 +64,7 @@ export default function PricingPage() {
             {loading ? "Redirecting..." : "Subscribe"}
           </button>
           <div className="mt-4 text-sm text-slate-400">Already have an account? <SignInButton mode="modal"><button className="text-cyan-300 underline">Sign in</button></SignInButton></div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">By subscribing, you confirm that you are responsible for your own decisions and comply with the laws and platform rules that apply to you.</p>
         </div>
       </div>
       </div>

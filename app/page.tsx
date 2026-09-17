@@ -18,7 +18,7 @@ export default function Home() {
             <Link className="rounded-full border border-cyan-200/30 px-5 py-3 text-slate-200 hover:border-cyan-300 hover:bg-cyan-300/10" href="/sign-up">Create account</Link>
           </div>
         </section>
-        <footer className="flex gap-5 text-xs text-slate-500"><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></footer>
+        <footer className="flex gap-5 text-xs text-slate-500"><Link href="/about">About</Link><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></footer>
       </div>
     </main>
   )
