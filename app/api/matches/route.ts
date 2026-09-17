@@ -30,11 +30,11 @@ const MAX_FIXTURES = Number.isFinite(configuredFixtureLimit) && configuredFixtur
   : 10
 
 type Fixture = {
-  fixture: { id: number; date?: string; status?: { short?: string; long?: string } }
-  league: { id: number; name?: string; season?: number; round?: string }
+  fixture: { id: number; date?: string; status?: { short?: string; long?: string; elapsed?: number | null }; venue?: { name?: string; city?: string } }
+  league: { id: number; name?: string; season?: number; round?: string; logo?: string }
   teams: {
-    home: { id: number; name: string }
-    away: { id: number; name: string }
+    home: { id: number; name: string; logo?: string }
+    away: { id: number; name: string; logo?: string }
   }
   goals?: { home?: number | null; away?: number | null }
 }
@@ -174,13 +174,21 @@ console.log("API ERRORS:", data.errors)
           fixtureId,
           kickoff: item.fixture.date || null,
           status: item.fixture.status?.long || item.fixture.status?.short || "Scheduled",
+          statusCode: item.fixture.status?.short || "NS",
+          elapsed: item.fixture.status?.elapsed ?? null,
+          venue: item.fixture.venue?.name || null,
+          leagueLogo: item.league.logo || null,
           leagueId: item.league.id,
           round: item.league.round || null,
           leagueName: item.league.name || "European competition",
           homeTeamId: item.teams.home.id,
           homeTeam: item.teams.home.name,
+          homeLogo: item.teams.home.logo || null,
           awayTeamId: item.teams.away.id,
           awayTeam: item.teams.away.name,
+          awayLogo: item.teams.away.logo || null,
+          homeGoals: item.goals?.home ?? null,
+          awayGoals: item.goals?.away ?? null,
           signal: probabilities.predictedOutcome,
           confidence: probabilities.confidence,
           homeProbability: probabilities.home,

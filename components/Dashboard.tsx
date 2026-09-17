@@ -11,13 +11,21 @@ type Match = {
   fixtureId: number
   kickoff: string | null
   status: string
+  statusCode: string
+  elapsed: number | null
+  venue: string | null
+  leagueLogo: string | null
   leagueId: number
   round: string | null
   leagueName: string
   homeTeamId: number
   homeTeam: string
+  homeLogo: string | null
   awayTeamId: number
   awayTeam: string
+  awayLogo: string | null
+  homeGoals: number | null
+  awayGoals: number | null
   signal: string
   confidence: number
   homeProbability: number

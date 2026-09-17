@@ -9,13 +9,21 @@ type Props = {
   fixtureId: number
   kickoff: string | null
   status: string
+  statusCode: string
+  elapsed: number | null
+  venue: string | null
+  leagueLogo: string | null
   leagueId: number
   round: string | null
   leagueName: string
   homeTeamId: number
   homeTeam: string
+  homeLogo: string | null
   awayTeamId: number
   awayTeam: string
+  awayLogo: string | null
+  homeGoals: number | null
+  awayGoals: number | null
   signal: string
   confidence: number
   homeProbability: number
@@ -35,13 +43,21 @@ export default function SignalCard({
   fixtureId,
   kickoff,
   status,
+  statusCode,
+  elapsed,
+  venue,
+  leagueLogo,
   leagueId,
   round,
   leagueName,
   homeTeamId,
   homeTeam,
+  homeLogo,
   awayTeamId,
   awayTeam,
+  awayLogo,
+  homeGoals,
+  awayGoals,
   signal,
   confidence,
   homeProbability,
@@ -98,19 +114,14 @@ export default function SignalCard({
       tabIndex={0}
     >
       <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">{leagueName}</p>
-          <h2 className="text-2xl font-bold">
-            <Link className="hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{homeTeam}</Link>
-            <span className="text-slate-500"> vs </span>
-            <Link className="hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{awayTeam}</Link>
-          </h2>
-          <p className="mt-2 text-xs text-slate-400">
-            {kickoff ? new Date(kickoff).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Kickoff unavailable"}
-            <span className="mx-2 text-slate-600">•</span>
-            {status}
-            {round && <><span className="mx-2 text-slate-600">•</span>{round}</>}
-          </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${["1H", "2H", "HT", "ET", "BT"].includes(statusCode) ? "bg-lime-300 shadow-[0_0_12px_rgba(199,243,107,0.9)]" : "bg-cyan-300"}`} /><p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">{leagueName}</p>{leagueLogo && <img alt="" className="ml-auto h-5 w-5 object-contain" src={leagueLogo} />}</div>
+          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+            <Link className="min-w-0 hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{homeLogo && <img alt="" className="mx-auto mb-2 h-10 w-10 object-contain" src={homeLogo} />}<p className="truncate text-base font-bold sm:text-lg">{homeTeam}</p></Link>
+            <div><p className="text-3xl font-bold tracking-wide text-white">{homeGoals ?? "-"}<span className="mx-2 text-slate-600">:</span>{awayGoals ?? "-"}</p><p className="mt-1 text-xs font-semibold text-cyan-200">{elapsed ? `${elapsed}'` : statusCode === "NS" ? "Scheduled" : status}</p></div>
+            <Link className="min-w-0 hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{awayLogo && <img alt="" className="mx-auto mb-2 h-10 w-10 object-contain" src={awayLogo} />}<p className="truncate text-base font-bold sm:text-lg">{awayTeam}</p></Link>
+          </div>
+          <p className="mt-4 text-center text-xs text-slate-400">{kickoff ? new Date(kickoff).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Kickoff unavailable"}{round && <><span className="mx-2 text-slate-600">•</span>{round}</>}{venue && <><span className="mx-2 text-slate-600">•</span>{venue}</>}</p>
         </div>
         <button
           aria-expanded={showHelp}
@@ -141,7 +152,7 @@ export default function SignalCard({
         </div>
       )}
 
-      <div className="mb-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="mb-5 grid grid-cols-2 gap-3 border-y border-slate-800 py-5 sm:grid-cols-4 lg:grid-cols-7">
         <div>
           <p className="text-gray-400 text-xs">{t.decisionSupport}</p>
           <p className={`font-bold ${signalColor}`}>
@@ -163,8 +174,8 @@ export default function SignalCard({
 
         <div>
           <p className="text-gray-400 text-xs">Probability split</p>
-          <p>{Math.max(homeProbability, drawProbability, awayProbability)}%</p>
-          <p className="mt-1 text-[10px] text-slate-500">H {homeProbability} / D {drawProbability} / A {awayProbability}</p>
+          <div className="mt-2 flex h-1.5 overflow-hidden bg-slate-800"><span className="bg-cyan-300" style={{ width: `${homeProbability}%` }} /><span className="bg-slate-400" style={{ width: `${drawProbability}%` }} /><span className="bg-lime-300" style={{ width: `${awayProbability}%` }} /></div>
+          <p className="mt-2 text-[10px] text-slate-500">H {homeProbability} / D {drawProbability} / A {awayProbability}</p>
         </div>
 
         <div>
