@@ -6,7 +6,7 @@ import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { fetchLineups } from "@/lib/fetchLineups"
 import { fetchMatchOdds } from "@/lib/fetchMatchOdds"
 import type { ApiLineup } from "@/lib/lineupUtils"
-import { requireActiveSubscription } from "@/lib/requireSubscription"
+import { getSubscriptionAccess } from "@/lib/requireSubscription"
 import { supabase } from "@/lib/supabaseClient"
 
 export const dynamic = "force-dynamic"
@@ -77,7 +77,7 @@ async function fetchTeamRating(teamId: number, leagueId: number, season: number)
 
 export async function GET(request: Request) {
   try {
-    const access = await requireActiveSubscription()
+    const access = await getSubscriptionAccess()
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status })
 
     if (!API_KEY) {
@@ -131,19 +131,19 @@ console.log("API ERRORS:", data.errors)
       qualifyingLeagueIds: fixtures.map((item: Fixture) => item.league.id),
     })
 
-    const selectedFixtures = fixtures.slice(0, MAX_FIXTURES)
+    const selectedFixtures = fixtures.slice(0, access.isPro ? MAX_FIXTURES : 2)
     const ratingEntries = await Promise.all(
       selectedFixtures.flatMap((item: Fixture) => [
         fetchTeamRating(item.teams.home.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
         fetchTeamRating(item.teams.away.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
       ])
     )
-    const projectedLineupEntries = await Promise.all(
-      selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(item.fixture.id))
-    )
-    const oddsEntries = await Promise.all(
-      selectedFixtures.map((item: Fixture) => fetchMatchOdds(item.fixture.id))
-    )
+    const projectedLineupEntries = access.isPro
+      ? await Promise.all(selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(item.fixture.id)))
+      : selectedFixtures.map(() => null)
+    const oddsEntries = access.isPro
+      ? await Promise.all(selectedFixtures.map((item: Fixture) => fetchMatchOdds(item.fixture.id)))
+      : selectedFixtures.map(() => null)
 
     const matches = await Promise.all(
       selectedFixtures.map(async (item: Fixture, index: number) => {
@@ -171,6 +171,7 @@ console.log("API ERRORS:", data.errors)
           : null
 
         return {
+          accessLevel: access.isPro ? "pro" : "free",
           fixtureId,
           kickoff: item.fixture.date || null,
           status: item.fixture.status?.long || item.fixture.status?.short || "Scheduled",
@@ -213,7 +214,7 @@ console.log("API ERRORS:", data.errors)
       })
     )
 
-    if (supabase && matches.length > 0) {
+    if (supabase && access.isPro && matches.length > 0) {
       const predictionRows = matches.map((match) => ({
         ...(() => {
           const fixture = selectedFixtures.find((item: Fixture) => item.fixture.id === match.fixtureId)

@@ -8,6 +8,7 @@ import { LEAGUES } from "@/lib/leagues"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
 
 type Match = {
+  accessLevel: "free" | "pro"
   fixtureId: number
   kickoff: string | null
   status: string
@@ -103,6 +104,7 @@ export default function Dashboard() {
         `${match.homeTeam} ${match.awayTeam}`.toLowerCase().includes(normalizedQuery)
       )
     : matches
+  const isFreePreview = matches[0]?.accessLevel === "free"
 
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
@@ -203,6 +205,8 @@ export default function Dashboard() {
           <p className="font-semibold text-lime-200">{t.decisionSupport}</p>
           <p className="mt-1">{t.decisionSupportCopy}</p>
         </aside>
+
+        {isFreePreview && <aside className="mb-8 border border-cyan-300/30 bg-cyan-300/10 p-5 text-sm text-slate-200"><p className="font-semibold text-cyan-100">Free preview</p><p className="mt-1">You can explore two fixtures and core model context. Upgrade to Pro for full daily coverage, live statistics, team and player research, projected XIs, odds context, and performance tracking.</p><Link className="mt-4 inline-block rounded-full bg-lime-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">Unlock Pro</Link></aside>}
 
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">{t.loadingFixtures}</div>}
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}

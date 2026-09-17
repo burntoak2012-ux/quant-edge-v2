@@ -46,6 +46,7 @@ export default function PricingPage() {
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Quant Edge</p>
       <h1 className="mt-3 text-4xl font-bold">{t.todayEdge}</h1>
       <p className="mt-3 max-w-xl text-slate-400">One plan for serious match analysis, with lineup-aware ratings when confirmed team sheets arrive.</p>
+      <div className="mt-8 max-w-md border border-cyan-100/10 bg-slate-900/40 p-5"><h2 className="font-semibold text-cyan-100">Free preview</h2><p className="mt-2 text-sm leading-6 text-slate-400">Explore two daily fixtures with the core probability split and team context. No card required.</p></div>
       <div className="qe-panel mt-10 max-w-md rounded-3xl border border-cyan-400/40 p-6">
         <h2 className="text-xl font-semibold">Pro</h2>
         <p className="mt-3 text-4xl font-bold text-lime-300">£9.99<span className="text-base font-medium text-slate-400"> / month</span></p>
