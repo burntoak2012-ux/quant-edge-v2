@@ -53,6 +53,40 @@ function formatEuropeanDate(value?: string) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value))
 }
 
+function compileResearchBrief({
+  homeName,
+  awayName,
+  homeForm,
+  awayForm,
+  lineupsPublished,
+  liveStatisticsPublished,
+  probabilities,
+  status,
+}: {
+  homeName: string
+  awayName: string
+  homeForm?: string
+  awayForm?: string
+  lineupsPublished: boolean
+  liveStatisticsPublished: boolean
+  probabilities: ReturnType<typeof calculateMatchProbabilities>
+  status?: string
+}) {
+  const notes = []
+  const probabilityGap = Math.abs(probabilities.home - probabilities.away)
+
+  if (lineupsPublished) notes.push("Confirmed team sheets are available. Review the starting XIs and formations before relying on pre-match ratings.")
+  else notes.push("Confirmed team sheets are not published yet. Lineup changes can materially alter the match context.")
+  if (homeForm && awayForm) notes.push(`${homeName} recent form: ${homeForm.slice(-5)}. ${awayName} recent form: ${awayForm.slice(-5)}.`)
+  if (probabilityGap <= 8) notes.push("The model sees a balanced matchup. The draw probability and late team news deserve extra attention.")
+  else if (probabilities.home > probabilities.away) notes.push(`${homeName} holds the stronger current model position, but the probability split remains an estimate rather than an instruction.`)
+  else notes.push(`${awayName} holds the stronger current model position, but the probability split remains an estimate rather than an instruction.`)
+  if (liveStatisticsPublished) notes.push(`Live provider statistics are available while the match status is ${status || "updating"}. Compare possession, shots, cards, and corners in context.`)
+  else notes.push("No live provider statistics are published yet. Check the match brief again as kickoff approaches or the match begins.")
+
+  return notes
+}
+
 export default async function FixturePage({
   params,
   searchParams,
@@ -110,6 +144,16 @@ export default async function FixturePage({
   const awayLiveStats = liveStats.find((entry) => entry.team?.name === awayName)?.statistics || []
   const liveStatTypes = Array.from(new Set([...homeLiveStats, ...awayLiveStats].map((stat) => stat.type).filter(Boolean)))
   const lineups = lineupsResponse?.response || []
+  const researchNotes = compileResearchBrief({
+    homeName,
+    awayName,
+    homeForm: homeTeamStats?.form,
+    awayForm: awayTeamStats?.form,
+    lineupsPublished: lineups.length > 0,
+    liveStatisticsPublished: liveStatTypes.length > 0,
+    probabilities,
+    status: fixture.fixture?.status?.long,
+  })
   const kickoff = fixture.fixture?.date
     ? new Date(fixture.fixture.date).toLocaleString([], { dateStyle: "full", timeStyle: "short" })
     : "Kickoff unavailable"
@@ -141,14 +185,12 @@ export default async function FixturePage({
           </div>
 
           <div className="qe-panel rounded-2xl border p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Research checklist</p>
-            <h2 className="mt-2 text-2xl font-bold">What to inspect</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Live research brief</p>
+            <h2 className="mt-2 text-2xl font-bold">What changed for this fixture</h2>
             <ul className="mt-6 space-y-4 text-sm text-slate-300">
-              <li className="border-l-2 border-lime-300 pl-3">Compare both team profiles and their competition baseline.</li>
-              <li className="border-l-2 border-cyan-300 pl-3">Check projected XI ratings once lineups are available.</li>
-              <li className="border-l-2 border-cyan-300 pl-3">Compare the probability split with the bookmaker market.</li>
-              <li className="border-l-2 border-lime-300 pl-3">Review injuries, motivation, schedule, and uncertainty before deciding anything.</li>
+              {researchNotes.map((note, index) => <li className={`border-l-2 pl-3 ${index % 2 ? "border-cyan-300" : "border-lime-300"}`} key={note}>{note}</li>)}
             </ul>
+            <p className="mt-6 border-t border-slate-800 pt-4 text-xs text-slate-500">This brief updates from match, lineup, form, and live-statistics data. External news and injury reports require a verified news provider before they can be included.</p>
           </div>
         </section>
 
