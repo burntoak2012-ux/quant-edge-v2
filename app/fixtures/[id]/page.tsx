@@ -26,6 +26,9 @@ type TeamStats = {
 type TeamStatsResponse = { response?: TeamStats; errors?: Record<string, string> }
 type HeadToHeadFixture = { fixture?: { date?: string; status?: { short?: string } }; teams?: { home?: { name?: string }; away?: { name?: string } }; goals?: { home?: number | null; away?: number | null } }
 type HeadToHeadResponse = { response?: HeadToHeadFixture[] }
+type MatchStatistic = { type?: string; value?: string | number | null }
+type LiveStatisticResponse = { response?: Array<{ team?: { name?: string }; statistics?: MatchStatistic[] }> }
+type LineupResponse = { response?: Array<{ team?: { name?: string }; formation?: string; startXI?: Array<{ player?: { name?: string }; position?: string }> }> }
 
 async function fetchTeamStats(teamId: number, leagueId: number, apiKey: string) {
   for (const season of [new Date().getUTCFullYear(), 2024]) {
@@ -68,7 +71,7 @@ export default async function FixturePage({
 
   const response = await fetch(`${API_URL}/fixtures?id=${fixtureId}`, {
     headers: { "x-apisports-key": apiKey },
-    next: { revalidate: 900 },
+    next: { revalidate: 60 },
   })
   const data = await response.json() as FixtureResponse
   const fixture = data.response?.[0]
@@ -80,10 +83,12 @@ export default async function FixturePage({
 
   const probabilities = calculateMatchProbabilities(Number(homeRating) || 70, Number(awayRating) || 70)
   const leagueId = Number(league) || 0
-  const [homeStats, awayStats, headToHeadResponse] = await Promise.all([
+  const [homeStats, awayStats, headToHeadResponse, liveStatsResponse, lineupsResponse] = await Promise.all([
     leagueId ? fetchTeamStats(homeId, leagueId, apiKey) : Promise.resolve(null),
     leagueId ? fetchTeamStats(awayId, leagueId, apiKey) : Promise.resolve(null),
     fetch(`${API_URL}/fixtures/headtohead?h2h=${homeId}-${awayId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 21600 } }).then((result) => result.json() as Promise<HeadToHeadResponse>).catch(() => null),
+    fetch(`${API_URL}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LiveStatisticResponse>).catch(() => null),
+    fetch(`${API_URL}/fixtures/lineups?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LineupResponse>).catch(() => null),
   ])
   const homeTeamStats = homeStats
   const awayTeamStats = awayStats
@@ -100,6 +105,11 @@ export default async function FixturePage({
     ["Corners", homeTeamStats?.corners?.total?.total, awayTeamStats?.corners?.total?.total],
   ]
   const headToHead = headToHeadResponse?.response?.slice(0, 5) || []
+  const liveStats = liveStatsResponse?.response || []
+  const homeLiveStats = liveStats.find((entry) => entry.team?.name === homeName)?.statistics || []
+  const awayLiveStats = liveStats.find((entry) => entry.team?.name === awayName)?.statistics || []
+  const liveStatTypes = Array.from(new Set([...homeLiveStats, ...awayLiveStats].map((stat) => stat.type).filter(Boolean)))
+  const lineups = lineupsResponse?.response || []
   const kickoff = fixture.fixture?.date
     ? new Date(fixture.fixture.date).toLocaleString([], { dateStyle: "full", timeStyle: "short" })
     : "Kickoff unavailable"
@@ -150,6 +160,24 @@ export default async function FixturePage({
               <thead className="bg-slate-900 text-xs uppercase tracking-[0.12em] text-slate-500"><tr><th className="px-4 py-3">Metric</th><th className="px-4 py-3 text-cyan-200">{homeName}</th><th className="px-4 py-3 text-lime-200">{awayName}</th></tr></thead>
               <tbody>{comparisonRows.map(([label, homeValue, awayValue]) => <tr className="border-t border-slate-800" key={label}><td className="px-4 py-3 text-slate-400">{label}</td><td className="px-4 py-3 font-semibold">{homeValue ?? "-"}</td><td className="px-4 py-3 font-semibold">{awayValue ?? "-"}</td></tr>)}</tbody>
             </table>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="qe-panel rounded-2xl border p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Live match data</p>
+            <h2 className="mt-2 text-2xl font-bold">Match statistics</h2>
+            {liveStatTypes.length > 0 ? <div className="mt-5 space-y-3">{liveStatTypes.map((type) => {
+              const homeValue = homeLiveStats.find((stat) => stat.type === type)?.value ?? "-"
+              const awayValue = awayLiveStats.find((stat) => stat.type === type)?.value ?? "-"
+              return <div className="grid grid-cols-[70px_1fr_70px] items-center gap-3 text-sm" key={type}><span className="text-right font-semibold text-cyan-200">{homeValue}</span><span className="text-center text-xs text-slate-400">{type}</span><span className="font-semibold text-lime-200">{awayValue}</span></div>
+            })}</div> : <p className="mt-5 text-sm text-slate-400">Live statistics will appear here after the provider publishes them.</p>}
+          </div>
+
+          <div className="qe-panel rounded-2xl border p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Team sheets</p>
+            <h2 className="mt-2 text-2xl font-bold">Confirmed lineups</h2>
+            {lineups.length > 0 ? <div className="mt-5 space-y-5">{lineups.map((lineup) => <div key={lineup.team?.name}><p className="font-semibold text-white">{lineup.team?.name || "Team"} <span className="ml-2 text-xs font-normal text-slate-500">{lineup.formation || "Formation unavailable"}</span></p><p className="mt-2 text-sm leading-7 text-slate-300">{lineup.startXI?.map((player) => player.player?.name).filter(Boolean).join(" · ") || "Starting XI unavailable"}</p></div>)}</div> : <p className="mt-5 text-sm text-slate-400">Confirmed lineups will appear here when published.</p>}
           </div>
         </section>
 

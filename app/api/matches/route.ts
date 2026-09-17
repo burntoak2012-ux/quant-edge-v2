@@ -22,6 +22,7 @@ const TARGET_LEAGUE_IDS = new Set([
   2,   // UEFA Champions League
   3,   // UEFA Europa League
   848, // UEFA Europa Conference League
+  18,  // AFC Champions League Two
 ])
 const configuredFixtureLimit = Number.parseInt(process.env.MATCH_LIMIT || "10", 10)
 const MAX_FIXTURES = Number.isFinite(configuredFixtureLimit) && configuredFixtureLimit > 0
