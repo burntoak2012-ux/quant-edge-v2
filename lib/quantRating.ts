@@ -10,6 +10,27 @@ export type QuantPlayerInput = {
   interceptions?: number
   performanceRating?: number
   isStarter?: boolean
+  recentPerformances?: RecentPlayerPerformance[]
+}
+
+export type RecentPlayerPerformance = {
+  position?: string
+  providerRating?: number
+  minutes?: number
+  goals?: number
+  assists?: number
+  tackles?: number
+  interceptions?: number
+  keyPasses?: number
+  shotsOnTarget?: number
+  cleanSheet?: boolean
+  goalImpacts?: GoalImpact[]
+}
+
+export type GoalImpact = {
+  minute?: number
+  scoreBefore?: { home: number; away: number }
+  team?: "home" | "away"
 }
 
 const clamp = (value: number, min: number, max: number) =>
@@ -23,6 +44,44 @@ const positionScore = (position?: string) => {
   return 78
 }
 
+function weightedGoalImpact(goals: GoalImpact[] = []) {
+  return goals.reduce((total, goal) => {
+    const minute = goal.minute || 45
+    const scoreBefore = goal.scoreBefore
+    const wasLevel = scoreBefore ? scoreBefore.home === scoreBefore.away : false
+    const wasBehind = scoreBefore && goal.team
+      ? goal.team === "home" ? scoreBefore.home < scoreBefore.away : scoreBefore.away < scoreBefore.home
+      : false
+    const wasLate = minute >= 75
+    return total + 1 + (wasBehind ? 0.8 : 0) + (wasLevel ? 0.35 : 0) + (wasLate ? 0.25 : 0)
+  }, 0)
+}
+
+function recentPerformanceScore(performances: RecentPlayerPerformance[] = []) {
+  if (!performances.length) return null
+
+  let weightedTotal = 0
+  let weightTotal = 0
+  performances.slice(0, 8).forEach((performance, index) => {
+    const weight = Math.pow(0.82, index)
+    const providerRating = performance.providerRating ? performance.providerRating * 10 : 70
+    const minutes = Math.max(0, performance.minutes || 0)
+    const position = (performance.position || "MID").toUpperCase()
+    const defensiveWork = (performance.tackles || 0) * (position.includes("DEF") ? 1.5 : 1.0) + (performance.interceptions || 0) * (position.includes("DEF") ? 1.7 : 1.1)
+    const creativeWork = (performance.keyPasses || 0) * (position.includes("MID") ? 1.15 : 0.85)
+    const finishingWork = (performance.shotsOnTarget || 0) * (position.includes("FWD") || position.includes("ATT") ? 1.1 : 0.75)
+    const workRate = Math.min(8, defensiveWork + creativeWork + finishingWork)
+    const weightedGoals = weightedGoalImpact(performance.goalImpacts)
+    const contributions = Math.min(10, (performance.assists || 0) * 2.5 + weightedGoals * 2.4)
+    const availability = minutes >= 60 ? 2 : minutes > 0 ? 0.5 : -3
+    const matchScore = clamp(providerRating + workRate + contributions + availability + (performance.cleanSheet ? 1.5 : 0), 45, 99)
+    weightedTotal += matchScore * weight
+    weightTotal += weight
+  })
+
+  return weightTotal ? weightedTotal / weightTotal : null
+}
+
 export function calculateQuantPlayerRating(input: QuantPlayerInput = {}) {
   const baseRating = clamp(input.baseRating ?? 72, 55, 95)
   const form = clamp(input.form ?? baseRating, 55, 95)
@@ -34,20 +93,23 @@ export function calculateQuantPlayerRating(input: QuantPlayerInput = {}) {
     0,
     8,
   )
+  const recentScore = recentPerformanceScore(input.recentPerformances)
   const goalContributions = Math.max(0, (input.goals ?? 0) + (input.assists ?? 0))
   const defensiveActions = Math.max(0, (input.tackles ?? 0) + (input.interceptions ?? 0))
   const contributionRate = minutes > 0 ? (goalContributions * 90) / minutes : 0
   const defensiveRate = minutes > 0 ? (defensiveActions * 90) / minutes : 0
-  const production = clamp(50 + contributionRate * 22 + defensiveRate * 4, 50, 95)
+  const weightedSeasonGoals = Math.min(12, goalContributions * 1.5)
+  const production = clamp(50 + weightedSeasonGoals + contributionRate * 12 + defensiveRate * 6, 50, 95)
   const recentPerformance = clamp(input.performanceRating ?? form, 55, 99)
   const role = positionScore(input.position)
 
   const rating =
-    baseRating * 0.42 +
-    form * 0.18 +
-    recentPerformance * 0.14 +
-    role * 0.14 +
-    production * 0.12 +
+    baseRating * 0.28 +
+    form * 0.12 +
+    recentPerformance * 0.12 +
+    (recentScore ?? recentPerformance) * 0.28 +
+    role * 0.10 +
+    production * 0.10 +
     availability * 0.5 +
     starts * 2
 

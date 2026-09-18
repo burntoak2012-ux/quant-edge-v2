@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 import { calculateQuantPlayerRating } from "@/lib/quantRating"
+import { fetchRecentPlayerPerformances } from "@/lib/fetchRecentPlayerPerformances"
 
 const API_URL = "https://v3.football.api-sports.io"
 
@@ -9,7 +10,7 @@ type PlayerResponse = {
   response?: Array<{
     player?: { id?: number; name?: string; age?: number; nationality?: string; photo?: string }
     statistics?: Array<{
-      team?: { name?: string }
+      team?: { id?: number; name?: string }
       league?: { name?: string }
       games?: { appearences?: number; appearances?: number; lineups?: number; minutes?: number; position?: string; rating?: string }
       goals?: { total?: number; assists?: number }
@@ -73,6 +74,9 @@ export default async function PlayerPage({
   const player = entry?.player
   const stats = entry?.statistics?.[0]
   if (!player?.name) notFound()
+  const recentPerformances = stats?.team?.id
+    ? await fetchRecentPlayerPerformances(playerId, stats.team.id, dataSeason, apiKey)
+    : []
   const seasonsResponse = await fetch(`${API_URL}/players/seasons?player=${playerId}`, {
     headers: { "x-apisports-key": apiKey },
     next: { revalidate: 86400 },
@@ -128,6 +132,7 @@ export default async function PlayerPage({
     tackles: stats?.tackles?.total,
     interceptions: stats?.interceptions,
     isStarter: (stats?.games?.lineups || 0) > 0,
+    recentPerformances,
   })
   const playerMinutes = stats?.games?.minutes || 0
   const playerGoals = stats?.goals?.total || 0
