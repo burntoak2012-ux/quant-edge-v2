@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/react";
 import { LanguageProvider } from "@/components/LanguageProvider";
 
 const displaySans = Space_Grotesk({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ClerkProvider>
           <LanguageProvider>{children}</LanguageProvider>
         </ClerkProvider>
+        <Analytics />
       </body>
     </html>
   );
