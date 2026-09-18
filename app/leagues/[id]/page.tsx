@@ -58,6 +58,11 @@ function formatDate(value?: string) {
   return new Date(value).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })
 }
 
+function isCompleted(fixture: Fixture) {
+  return fixture.goals?.home !== null && fixture.goals?.home !== undefined
+    && fixture.goals?.away !== null && fixture.goals?.away !== undefined
+}
+
 export default async function LeaguePage({
   params,
   searchParams,
@@ -105,6 +110,14 @@ export default async function LeaguePage({
   const visibleFixtures = activeView === "date"
     ? fixtures.filter((fixture) => fixture.fixture.date?.slice(0, 10) === activeDate)
     : groupedFixtures[rounds[roundIndex]] || []
+  const recentFixtures = fixtures
+    .filter(isCompleted)
+    .sort((a, b) => new Date(b.fixture.date || 0).getTime() - new Date(a.fixture.date || 0).getTime())
+    .slice(0, 5)
+  const upcomingFixtures = fixtures
+    .filter((fixture) => !isCompleted(fixture))
+    .sort((a, b) => new Date(a.fixture.date || 0).getTime() - new Date(b.fixture.date || 0).getTime())
+    .slice(0, 5)
   const previousRound = Math.max(roundIndex - 1, 0)
   const nextRound = Math.min(roundIndex + 1, Math.max(rounds.length - 1, 0))
   const leagueHref = (params: Record<string, string>) => {
@@ -198,6 +211,27 @@ export default async function LeaguePage({
               <p className="mt-3 text-xs text-slate-500">Showing {visibleFixtures.length} fixtures in this view. Use the arrows to move through the season.</p>
             </div>
             <div className="mt-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="qe-panel overflow-hidden rounded-2xl border">
+                  <div className="border-b border-slate-800 px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-lime-300">Recent results</p><p className="mt-1 text-xs text-slate-500">Latest completed fixtures</p></div>
+                  {recentFixtures.length > 0 ? recentFixtures.map((fixture) => (
+                    <Link className="block border-b border-slate-800 p-3 last:border-b-0 hover:bg-slate-800/50" href={`/fixtures/${fixture.fixture.id}?home=${fixture.teams.home.id}&away=${fixture.teams.away.id}&league=${leagueId}`} key={fixture.fixture.id}>
+                      <div className="flex items-center justify-between gap-3 text-xs text-slate-500"><span>{formatDate(fixture.fixture.date)}</span><span>{fixture.league.round || "Completed"}</span></div>
+                      <div className="mt-2 grid grid-cols-[1fr_auto] gap-3 text-sm"><div><p className="font-semibold text-white">{fixture.teams.home.name}</p><p className="mt-1 font-semibold text-white">{fixture.teams.away.name}</p></div><div className="text-right font-bold text-cyan-200"><p>{fixture.goals?.home}</p><p className="mt-1">{fixture.goals?.away}</p></div></div>
+                    </Link>
+                  )) : <p className="p-4 text-sm text-slate-400">No completed fixtures are available.</p>}
+                </div>
+                <div className="qe-panel overflow-hidden rounded-2xl border">
+                  <div className="border-b border-slate-800 px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Next fixtures</p><p className="mt-1 text-xs text-slate-500">Upcoming scheduled matches</p></div>
+                  {upcomingFixtures.length > 0 ? upcomingFixtures.map((fixture) => (
+                    <Link className="block border-b border-slate-800 p-3 last:border-b-0 hover:bg-slate-800/50" href={`/fixtures/${fixture.fixture.id}?home=${fixture.teams.home.id}&away=${fixture.teams.away.id}&league=${leagueId}`} key={fixture.fixture.id}>
+                      <div className="flex items-center justify-between gap-3 text-xs text-slate-500"><span>{formatDate(fixture.fixture.date)}</span><span>{fixture.league.round || fixture.fixture.status?.short || "Scheduled"}</span></div>
+                      <div className="mt-2 grid grid-cols-[1fr_auto] gap-3 text-sm"><div><p className="font-semibold text-white">{fixture.teams.home.name}</p><p className="mt-1 font-semibold text-white">{fixture.teams.away.name}</p></div><span className="self-center text-xs font-semibold text-lime-200">View brief</span></div>
+                    </Link>
+                  )) : <p className="p-4 text-sm text-slate-400">No upcoming fixtures are available.</p>}
+                </div>
+              </div>
+              <div className="mt-5">
               {visibleFixtures.length > 0 ? (
                 <div className="qe-panel rounded-2xl border">
                     {visibleFixtures.map((fixture) => (
@@ -213,6 +247,7 @@ export default async function LeaguePage({
                     ))}
                 </div>
               ) : <p className="border border-slate-800 p-5 text-sm text-slate-400">No fixtures are available for this selection.</p>}
+              </div>
             </div>
           </section>
         </div>
