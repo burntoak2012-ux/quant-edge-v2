@@ -65,16 +65,13 @@ function isCompleted(fixture: Fixture) {
 
 export default async function LeaguePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ view?: string; date?: string; round?: string }>
 }) {
   const access = await requireActiveSubscription()
   if (!access.ok) redirect(access.status === 401 ? "/sign-in" : "/pricing")
 
   const { id } = await params
-  const filters = await searchParams
   const leagueId = Number(id)
   const league = getLeague(leagueId)
   const apiKey = process.env.API_FOOTBALL_KEY
@@ -97,19 +94,6 @@ export default async function LeaguePage({
   const standings = standingsResult?.data.response?.[0]?.league?.standings?.[0] || []
   const fixtures = fixturesResult?.data.response || []
   const displayedSeason = standingsResult?.season || fixturesResult?.season || SUPPORTED_BASELINE_SEASON
-  const groupedFixtures = fixtures.reduce<Record<string, Fixture[]>>((groups, fixture) => {
-    const round = fixture.league.round || "Fixtures"
-    groups[round] = groups[round] || []
-    groups[round].push(fixture)
-    return groups
-  }, {})
-  const rounds = Object.keys(groupedFixtures)
-  const roundIndex = Math.min(Math.max(Number.parseInt(filters.round || "0", 10) || 0, 0), Math.max(rounds.length - 1, 0))
-  const activeView = filters.view === "date" ? "date" : "matchday"
-  const activeDate = filters.date || fixtures[0]?.fixture.date?.slice(0, 10) || ""
-  const visibleFixtures = activeView === "date"
-    ? fixtures.filter((fixture) => fixture.fixture.date?.slice(0, 10) === activeDate)
-    : groupedFixtures[rounds[roundIndex]] || []
   const recentFixtures = fixtures
     .filter(isCompleted)
     .sort((a, b) => new Date(b.fixture.date || 0).getTime() - new Date(a.fixture.date || 0).getTime())
@@ -118,13 +102,6 @@ export default async function LeaguePage({
     .filter((fixture) => !isCompleted(fixture))
     .sort((a, b) => new Date(a.fixture.date || 0).getTime() - new Date(b.fixture.date || 0).getTime())
     .slice(0, 5)
-  const previousRound = Math.max(roundIndex - 1, 0)
-  const nextRound = Math.min(roundIndex + 1, Math.max(rounds.length - 1, 0))
-  const leagueHref = (params: Record<string, string>) => {
-    const query = new URLSearchParams(params).toString()
-    return `/leagues/${leagueId}?${query}`
-  }
-
   const leaderboardCards = leaderboardTypes.map(([title], index) => ({
     title,
     entries: Array.isArray(leaderboardResults[index]?.data.response) ? leaderboardResults[index]?.data.response?.slice(0, 10) || [] : [],
@@ -184,69 +161,14 @@ export default async function LeaguePage({
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Schedule</p>
-                <h2 className="mt-2 text-2xl font-bold">All fixtures</h2>
+                <h2 className="mt-2 text-2xl font-bold">Previous and next fixtures</h2>
               </div>
               <span className="text-xs text-slate-500">{fixtures.length} matches in season</span>
             </div>
-            <div className="qe-panel mt-5 rounded-2xl border p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex border border-slate-700 p-1 text-sm">
-                  <Link className={`px-3 py-2 ${activeView === "matchday" ? "bg-cyan-300 font-semibold text-slate-950" : "text-slate-300 hover:text-white"}`} href={leagueHref({ view: "matchday", round: String(roundIndex) })}>Matchday</Link>
-                  <Link className={`px-3 py-2 ${activeView === "date" ? "bg-cyan-300 font-semibold text-slate-950" : "text-slate-300 hover:text-white"}`} href={leagueHref({ view: "date", date: activeDate })}>Date</Link>
-                </div>
-                {activeView === "matchday" ? (
-                  <div className="flex items-center gap-2">
-                    <Link aria-label="Previous matchday" className="flex h-9 w-9 items-center justify-center border border-slate-700 text-lg hover:border-cyan-300" href={leagueHref({ view: "matchday", round: String(previousRound) })}>&larr;</Link>
-                    <span className="min-w-32 text-center text-sm font-semibold text-slate-200">{rounds[roundIndex] || "Matchday unavailable"}</span>
-                    <Link aria-label="Next matchday" className="flex h-9 w-9 items-center justify-center border border-slate-700 text-lg hover:border-cyan-300" href={leagueHref({ view: "matchday", round: String(nextRound) })}>&rarr;</Link>
-                  </div>
-                ) : (
-                  <form className="flex items-center gap-2" method="get">
-                    <input name="view" type="hidden" value="date" />
-                    <input className="h-9 border border-slate-700 bg-slate-950 px-2 text-sm text-white" name="date" type="date" value={activeDate} />
-                    <button className="h-9 border border-cyan-300 px-3 text-sm font-semibold text-cyan-200 hover:bg-cyan-300/10" type="submit">Show date</button>
-                  </form>
-                )}
-              </div>
-              <p className="mt-3 text-xs text-slate-500">Showing {visibleFixtures.length} fixtures in this view. Use the arrows to move through the season.</p>
-            </div>
             <div className="mt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="qe-panel overflow-hidden rounded-2xl border">
-                  <div className="border-b border-slate-800 px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-lime-300">Recent results</p><p className="mt-1 text-xs text-slate-500">Latest completed fixtures</p></div>
-                  {recentFixtures.length > 0 ? recentFixtures.map((fixture) => (
-                    <Link className="block border-b border-slate-800 p-3 last:border-b-0 hover:bg-slate-800/50" href={`/fixtures/${fixture.fixture.id}?home=${fixture.teams.home.id}&away=${fixture.teams.away.id}&league=${leagueId}`} key={fixture.fixture.id}>
-                      <div className="flex items-center justify-between gap-3 text-xs text-slate-500"><span>{formatDate(fixture.fixture.date)}</span><span>{fixture.league.round || "Completed"}</span></div>
-                      <div className="mt-2 grid grid-cols-[1fr_auto] gap-3 text-sm"><div><p className="font-semibold text-white">{fixture.teams.home.name}</p><p className="mt-1 font-semibold text-white">{fixture.teams.away.name}</p></div><div className="text-right font-bold text-cyan-200"><p>{fixture.goals?.home}</p><p className="mt-1">{fixture.goals?.away}</p></div></div>
-                    </Link>
-                  )) : <p className="p-4 text-sm text-slate-400">No completed fixtures are available.</p>}
-                </div>
-                <div className="qe-panel overflow-hidden rounded-2xl border">
-                  <div className="border-b border-slate-800 px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Next fixtures</p><p className="mt-1 text-xs text-slate-500">Upcoming scheduled matches</p></div>
-                  {upcomingFixtures.length > 0 ? upcomingFixtures.map((fixture) => (
-                    <Link className="block border-b border-slate-800 p-3 last:border-b-0 hover:bg-slate-800/50" href={`/fixtures/${fixture.fixture.id}?home=${fixture.teams.home.id}&away=${fixture.teams.away.id}&league=${leagueId}`} key={fixture.fixture.id}>
-                      <div className="flex items-center justify-between gap-3 text-xs text-slate-500"><span>{formatDate(fixture.fixture.date)}</span><span>{fixture.league.round || fixture.fixture.status?.short || "Scheduled"}</span></div>
-                      <div className="mt-2 grid grid-cols-[1fr_auto] gap-3 text-sm"><div><p className="font-semibold text-white">{fixture.teams.home.name}</p><p className="mt-1 font-semibold text-white">{fixture.teams.away.name}</p></div><span className="self-center text-xs font-semibold text-lime-200">View brief</span></div>
-                    </Link>
-                  )) : <p className="p-4 text-sm text-slate-400">No upcoming fixtures are available.</p>}
-                </div>
-              </div>
-              <div className="mt-5">
-              {visibleFixtures.length > 0 ? (
-                <div className="qe-panel rounded-2xl border">
-                    {visibleFixtures.map((fixture) => (
-                      <div className="grid gap-2 border-b border-slate-800 p-3 last:border-b-0 sm:grid-cols-[110px_minmax(0,1fr)_90px] sm:items-center" key={fixture.fixture.id}>
-                        <p className="text-xs text-slate-500">{formatDate(fixture.fixture.date)}</p>
-                        <div className="text-sm">
-                          <Link className="font-semibold hover:text-cyan-300" href={`/teams/${fixture.teams.home.id}?league=${leagueId}`}>{fixture.teams.home.name}</Link>
-                          <span className="mx-2 text-slate-600">vs</span>
-                          <Link className="font-semibold hover:text-cyan-300" href={`/teams/${fixture.teams.away.id}?league=${leagueId}`}>{fixture.teams.away.name}</Link>
-                        </div>
-                        <p className="text-left text-xs text-slate-500 sm:text-right">{fixture.goals?.home !== null && fixture.goals?.home !== undefined ? `${fixture.goals.home} - ${fixture.goals.away}` : fixture.fixture.status?.short || "Scheduled"}</p>
-                      </div>
-                    ))}
-                </div>
-              ) : <p className="border border-slate-800 p-5 text-sm text-slate-400">No fixtures are available for this selection.</p>}
+              <div className="space-y-5">
+                <div><div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-lime-300">Previous fixtures</p><span className="text-xs text-slate-500">Scroll horizontally</span></div><div className="flex snap-x gap-3 overflow-x-auto pb-2">{recentFixtures.length > 0 ? recentFixtures.map((fixture) => <Link className="qe-panel min-w-[230px] snap-start rounded-2xl border p-4 hover:border-lime-300/50" href={`/fixtures/${fixture.fixture.id}?home=${fixture.teams.home.id}&away=${fixture.teams.away.id}&league=${leagueId}`} key={fixture.fixture.id}><p className="text-xs text-slate-500">{formatDate(fixture.fixture.date)}</p><p className="mt-3 truncate text-sm font-semibold">{fixture.teams.home.name}</p><p className="mt-1 truncate text-sm font-semibold">{fixture.teams.away.name}</p><p className="mt-3 text-xl font-bold text-lime-200">{fixture.goals?.home} - {fixture.goals?.away}</p><p className="mt-2 text-xs text-slate-500">Open match brief</p></Link>) : <p className="text-sm text-slate-400">No completed fixtures are available.</p>}</div></div>
+                <div><div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Future fixtures</p><span className="text-xs text-slate-500">Scroll horizontally</span></div><div className="flex snap-x gap-3 overflow-x-auto pb-2">{upcomingFixtures.length > 0 ? upcomingFixtures.map((fixture) => <Link className="qe-panel min-w-[230px] snap-start rounded-2xl border p-4 hover:border-cyan-300/50" href={`/fixtures/${fixture.fixture.id}?home=${fixture.teams.home.id}&away=${fixture.teams.away.id}&league=${leagueId}`} key={fixture.fixture.id}><p className="text-xs text-slate-500">{formatDate(fixture.fixture.date)}</p><p className="mt-3 truncate text-sm font-semibold">{fixture.teams.home.name}</p><p className="mt-1 truncate text-sm font-semibold">{fixture.teams.away.name}</p><p className="mt-3 text-sm font-semibold text-cyan-200">Scheduled</p><p className="mt-2 text-xs text-slate-500">Open match brief</p></Link>) : <p className="text-sm text-slate-400">No upcoming fixtures are available.</p>}</div></div>
               </div>
             </div>
           </section>
