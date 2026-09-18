@@ -16,8 +16,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Quant Edge | Match intelligence",
-  description: "Lineup-aware football ratings and match signals.",
+  metadataBase: new URL("https://quantedgefootball.com"),
+  title: {
+    default: "Quant Edge | Football match analysis",
+    template: "%s | Quant Edge",
+  },
+  description: "Football match analysis with team form, player ratings, projected lineups, probabilities and match context.",
+  openGraph: {
+    title: "Quant Edge | Football match analysis",
+    description: "Investigate football fixtures with evidence, ratings and model context.",
+    url: "https://quantedgefootball.com",
+    siteName: "Quant Edge",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
