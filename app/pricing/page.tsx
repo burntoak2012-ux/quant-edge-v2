@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { SignInButton } from "@clerk/nextjs"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
+import BrandMark from "@/components/BrandMark"
 
 export default function PricingPage() {
   const { t } = useLanguage()
@@ -43,7 +44,7 @@ export default function PricingPage() {
     <main className="qe-grid min-h-screen p-6 text-white sm:p-10">
       <div className="mx-auto max-w-3xl">
       <div className="flex justify-end"><LanguageSelector /></div>
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Quant Edge</p>
+      <BrandMark />
       <h1 className="mt-3 text-4xl font-bold">{t.todayEdge}</h1>
       <p className="mt-3 max-w-xl text-slate-400">One plan for serious match analysis, with lineup-aware ratings when confirmed team sheets arrive.</p>
       <div className="mt-8 max-w-md border border-cyan-100/10 bg-slate-900/40 p-5"><h2 className="font-semibold text-cyan-100">Free preview</h2><p className="mt-2 text-sm leading-6 text-slate-400">Explore two daily fixtures with the core probability split and team context. No card required.</p></div>

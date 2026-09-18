@@ -1,5 +1,6 @@
 import { UserButton } from "@clerk/nextjs"
 import Link from "next/link"
+import BrandMark from "@/components/BrandMark"
 
 export default function AccountPage() {
   return (
@@ -7,7 +8,7 @@ export default function AccountPage() {
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Quant Edge</p>
+            <BrandMark compact />
             <h1 className="mt-3 text-3xl font-bold">Your account</h1>
           </div>
           <div className="flex items-center gap-3">

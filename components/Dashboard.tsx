@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import SignalCard from "@/components/SignalCard"
 import { LEAGUES } from "@/lib/leagues"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
+import BrandMark from "@/components/BrandMark"
 
 type Match = {
   accessLevel: "free" | "pro"
@@ -114,7 +115,8 @@ export default function Dashboard() {
         <header className="qe-panel qe-reveal mb-8 rounded-3xl border p-5 shadow-2xl shadow-cyan-950/20 sm:p-7">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300">Quant Edge / Match intelligence</p>
+              <div className="mb-3"><BrandMark compact /></div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300">Match intelligence</p>
               <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">{t.todayEdge}<span className="text-lime-300">.</span></h1>
             </div>
 

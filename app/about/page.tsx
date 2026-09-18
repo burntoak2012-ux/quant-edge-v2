@@ -1,4 +1,5 @@
 import Link from "next/link"
+import BrandMark from "@/components/BrandMark"
 
 const principles = [
   ["Evidence before excitement", "Ratings, probabilities, odds, team data, lineups, and performance records should be visible and open to question."],
@@ -12,7 +13,7 @@ export default function AboutPage() {
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-5xl">
-        <nav className="flex items-center justify-between"><Link className="text-sm font-bold tracking-[0.18em] text-cyan-200" href="/">QUANT EDGE</Link><Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-slate-200 hover:border-cyan-200 hover:bg-cyan-200/10" href="/pricing">View Pro</Link></nav>
+        <nav className="flex items-center justify-between"><BrandMark /><Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-slate-200 hover:border-cyan-200 hover:bg-cyan-200/10" href="/pricing">View Pro</Link></nav>
         <header className="mt-16 max-w-4xl">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-lime-300">Our manifesto</p>
           <h1 className="mt-4 text-5xl font-bold leading-[0.98] sm:text-7xl">Football is context, not certainty.</h1>

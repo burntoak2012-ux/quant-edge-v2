@@ -1,12 +1,13 @@
 import Link from "next/link"
 import { LanguageSelector } from "@/components/LanguageProvider"
+import BrandMark from "@/components/BrandMark"
 
 export default function Home() {
   return (
     <main className="qe-grid min-h-screen px-6 py-8 text-white sm:px-10">
       <div className="mx-auto flex min-h-[85vh] max-w-6xl flex-col justify-between">
         <nav className="flex items-center justify-between">
-          <span className="text-sm font-bold tracking-[0.18em] text-cyan-200">QUANT EDGE</span>
+          <BrandMark />
           <div className="flex items-center gap-3"><LanguageSelector /><Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-slate-200 hover:border-cyan-200 hover:bg-cyan-200/10" href="/sign-in">Sign in</Link></div>
         </nav>
         <section className="max-w-3xl py-20">
