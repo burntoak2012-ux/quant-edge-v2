@@ -15,8 +15,10 @@ export default function Home() {
           <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-400">Quant Edge combines team form, internal player efficiency ratings, and confirmed lineups into a focused match signal dashboard.</p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link className="rounded-full bg-lime-300 px-5 py-3 font-semibold text-slate-950 shadow-lg shadow-lime-300/10 hover:bg-lime-200" href="/pricing">Start with Pro</Link>
+            <Link className="rounded-full border border-lime-300/40 px-5 py-3 text-lime-200 hover:border-lime-300 hover:bg-lime-300/10" href="/sign-up">Explore 2 free matches</Link>
             <Link className="rounded-full border border-cyan-200/30 px-5 py-3 text-slate-200 hover:border-cyan-300 hover:bg-cyan-300/10" href="/sign-up">Create account</Link>
           </div>
+          <p className="mt-4 text-sm text-slate-500">Free preview. No payment required.</p>
         </section>
         <footer className="flex gap-5 text-xs text-slate-500"><Link href="/about">About</Link><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></footer>
       </div>
