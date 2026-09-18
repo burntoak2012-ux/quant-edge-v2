@@ -196,6 +196,7 @@ console.log("API ERRORS:", data.errors)
           drawProbability: probabilities.draw,
           awayProbability: probabilities.away,
           odds: selectedOdds ? selectedOdds.toFixed(2) : null,
+          oddsMarkets: matchOdds?.markets || [],
           valuePercent,
           valueLabel: valuePercent === null
             ? "Unavailable"
@@ -208,6 +209,7 @@ console.log("API ERRORS:", data.errors)
           awayRating,
           homeProjectedRating,
           awayProjectedRating,
+          projectedLineups,
           hasLineups: false,
           combinedLineupTotals: null,
         }
@@ -276,6 +278,14 @@ async function fetchProjectedLineupRatings(fixtureId: number) {
     const ratings = (lineups as ApiLineup[]).map((lineup) => ({
       team: lineup.team?.name || "Team",
       rating: calculateLineupRating(lineup.startXI || []).average,
+      formation: lineup.formation || null,
+      players: (lineup.startXI || []).map((player) => ({
+        name: player.player?.name || player.name || "Unknown player",
+        photo: player.player?.photo || null,
+        position: player.position || player.player?.pos || player.player?.position || "MID",
+        grid: player.player?.grid || null,
+        rating: calculateLineupRating([player]).players[0]?.rating || null,
+      })),
     }))
 
     return ratings.length > 0 ? ratings : null

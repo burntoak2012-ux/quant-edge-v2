@@ -30,12 +30,14 @@ type Props = {
   drawProbability: number
   awayProbability: number
   odds: string | null
+  oddsMarkets: Array<{ name: string; label: string; odds: string[] }>
   valuePercent: number | null
   valueLabel: string
   homeRating: number
   awayRating: number
   homeProjectedRating: number | null
   awayProjectedRating: number | null
+  projectedLineups: Array<{ team: string; rating: number; formation: string | null; players: Array<{ name: string; photo: string | null; position: string; grid: string | null; rating: number | null }> }> | null
   combinedLineupTotal?: number
 }
 
@@ -64,17 +66,26 @@ export default function SignalCard({
   drawProbability,
   awayProbability,
   odds,
+  oddsMarkets,
   valuePercent,
   valueLabel,
   homeRating,
   awayRating,
   homeProjectedRating,
   awayProjectedRating,
+  projectedLineups,
   combinedLineupTotal,
 }: Props) {
   const router = useRouter()
   const { t } = useLanguage()
   const [showHelp, setShowHelp] = useState(false)
+  const [showLineup, setShowLineup] = useState(false)
+
+  function pitchPosition(grid: string | null) {
+    const [row, column] = grid?.split(":").map(Number) || []
+    if (!row || !column) return null
+    return { top: `${((row - 1) / 10) * 88 + 6}%`, left: `${((column - 1) / 6) * 82 + 9}%` }
+  }
   const signalColor =
     signal === "HOME WIN"
       ? "text-green-400"
@@ -152,6 +163,13 @@ export default function SignalCard({
         </div>
       )}
 
+      <div className="mb-5 flex flex-wrap gap-2">
+        <button className="rounded-full border border-lime-300/40 px-3 py-1.5 text-xs font-semibold text-lime-200 hover:bg-lime-300/10" onClick={(event) => { event.stopPropagation(); setShowLineup((visible) => !visible) }} type="button">
+          {showLineup ? "Hide expected XI" : "View expected XI"}
+        </button>
+        {oddsMarkets.map((market) => <span className="rounded-full border border-cyan-200/20 bg-cyan-200/5 px-3 py-1.5 text-xs text-cyan-100" key={market.name}>{market.label}: {market.odds.slice(0, 2).join(" · ")}</span>)}
+      </div>
+
       <div className="mb-5 grid grid-cols-2 gap-3 border-y border-slate-800 py-5 sm:grid-cols-4 lg:grid-cols-7">
         <div>
           <p className="text-gray-400 text-xs">{t.decisionSupport}</p>
@@ -211,6 +229,14 @@ export default function SignalCard({
         <span className="mx-2 text-slate-700">•</span>
         <span>Use this as research, not a betting instruction.</span>
       </div>
+      {showLineup && <div className="mb-5 grid gap-5 border-y border-slate-800 py-5 lg:grid-cols-2">
+        {projectedLineups?.length ? projectedLineups.map((lineup) => <div key={lineup.team}>
+          <div className="mb-2 flex items-center justify-between"><p className="font-semibold text-white">{lineup.team}</p><span className="text-xs text-lime-200">XI {lineup.rating} {lineup.formation ? `· ${lineup.formation}` : ""}</span></div>
+          <div className="relative aspect-[3/5] overflow-hidden rounded-xl border border-lime-300/30 bg-emerald-900/70" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)", backgroundSize: "100% 20%, 25% 100%" }}>
+            {lineup.players.map((player, index) => { const position = pitchPosition(player.grid); return position ? <span className="absolute -translate-x-1/2 -translate-y-1/2 text-center" key={`${player.name}-${index}`} style={position}><span className="block h-7 w-7 overflow-hidden rounded-full border border-white/70 bg-cyan-300 text-[9px] font-bold text-slate-950">{player.photo ? <img alt="" className="h-full w-full object-cover" src={player.photo} /> : player.position.slice(0, 1)}</span><span className="mt-1 block max-w-16 truncate text-[9px] font-semibold text-white">{player.name}</span></span> : null })}
+          </div>
+        </div>) : <p className="text-sm text-slate-400">Expected lineups have not been published yet.</p>}
+      </div>}
     </div>
   )
 }

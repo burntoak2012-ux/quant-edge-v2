@@ -1,7 +1,7 @@
 import { getPlayerRating } from "./playerRatings"
 
 export type LineupPlayer = {
-  player?: { name?: string; position?: string; pos?: string }
+  player?: { name?: string; position?: string; pos?: string; photo?: string; grid?: string }
   name?: string
   position?: string
   starts?: boolean

@@ -33,12 +33,14 @@ type Match = {
   drawProbability: number
   awayProbability: number
   odds: string | null
+  oddsMarkets: Array<{ name: string; label: string; odds: string[] }>
   valuePercent: number | null
   valueLabel: string
   homeRating: number
   awayRating: number
   homeProjectedRating: number | null
   awayProjectedRating: number | null
+  projectedLineups: Array<{ team: string; rating: number; formation: string | null; players: Array<{ name: string; photo: string | null; position: string; grid: string | null; rating: number | null }> }> | null
   hasLineups: boolean
   combinedLineupTotals?: { combinedTotal: number } | null
 }

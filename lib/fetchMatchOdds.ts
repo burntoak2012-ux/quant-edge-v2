@@ -20,6 +20,7 @@ export type MatchOdds = {
   home: number | null
   draw: number | null
   away: number | null
+  markets: Array<{ name: string; label: string; odds: string[] }>
 }
 
 export async function fetchMatchOdds(fixtureId: number): Promise<MatchOdds | null> {
@@ -37,7 +38,8 @@ export async function fetchMatchOdds(fixtureId: number): Promise<MatchOdds | nul
 
     const data = await response.json() as OddsResponse
     const bookmaker = data.response?.[0]?.bookmakers?.[0]
-    const market = bookmaker?.bets?.find((bet) => bet.name === "Match Winner")
+    const bets = bookmaker?.bets || []
+    const market = bets.find((bet) => bet.name === "Match Winner")
     const values = market?.values || []
     const getOdd = (name: string) => {
       const odd = values.find((entry) => entry.value === name)?.odd
@@ -45,8 +47,18 @@ export async function fetchMatchOdds(fixtureId: number): Promise<MatchOdds | nul
       return Number.isFinite(parsed) && parsed > 1 ? parsed : null
     }
 
-    const odds = { home: getOdd("Home"), draw: getOdd("Draw"), away: getOdd("Away") }
-    return odds.home || odds.draw || odds.away ? odds : null
+    const additionalMarkets = [
+      { name: "Goals Over/Under", label: "Total goals" },
+      { name: "Corners Over/Under", label: "Corners" },
+      { name: "Cards Over/Under", label: "Cards" },
+      { name: "Both Teams Score", label: "Both teams score" },
+    ]
+    const markets = additionalMarkets.flatMap(({ name, label }) => {
+      const values = bets.find((bet) => bet.name === name)?.values || []
+      return values.length ? [{ name, label, odds: values.map((entry) => `${entry.value || ""} ${entry.odd || ""}`.trim()) }] : []
+    })
+    const odds = { home: getOdd("Home"), draw: getOdd("Draw"), away: getOdd("Away"), markets }
+    return odds.home || odds.draw || odds.away || markets.length ? odds : null
   } catch (error) {
     console.error("MATCH ODDS ERROR", { fixtureId, error })
     return null
