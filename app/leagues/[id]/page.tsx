@@ -116,6 +116,10 @@ export default async function LeaguePage({
     title,
     entries: Array.isArray(leaderboardResults[index]?.data.response) ? leaderboardResults[index]?.data.response?.slice(0, 10) || [] : [],
   }))
+  const completedFixtures = fixtures.filter((fixture) => fixture.goals?.home !== null && fixture.goals?.home !== undefined && fixture.goals?.away !== null && fixture.goals?.away !== undefined)
+  const competitionGoals = completedFixtures.reduce((total, fixture) => total + (fixture.goals?.home || 0) + (fixture.goals?.away || 0), 0)
+  const topTeam = standings[0]
+  const topScorer = leaderboardCards[0].entries[0]?.player?.name
 
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
@@ -212,6 +216,17 @@ export default async function LeaguePage({
             </div>
           </section>
         </div>
+
+        <section className="mt-10 border-t border-slate-800 pt-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Competition snapshot</p>
+          <h2 className="mt-2 text-2xl font-bold">The shape of this season</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Current leader</p><p className="mt-2 truncate text-lg font-semibold text-white">{topTeam?.team.name || "-"}</p><p className="mt-2 text-xs text-slate-400">{topTeam ? `${topTeam.points} points` : "Standings unavailable"}</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Top scorer</p><p className="mt-2 truncate text-lg font-semibold text-cyan-200">{topScorer || "-"}</p><p className="mt-2 text-xs text-slate-400">from the current leaderboard</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Completed fixtures</p><p className="mt-2 text-2xl font-semibold text-white">{completedFixtures.length}</p><p className="mt-2 text-xs text-slate-400">of {fixtures.length} listed</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals / match</p><p className="mt-2 text-2xl font-semibold text-lime-200">{completedFixtures.length ? (competitionGoals / completedFixtures.length).toFixed(2) : "-"}</p><p className="mt-2 text-xs text-slate-400">completed matches</p></div>
+          </div>
+        </section>
 
         <section className="mt-10 border-t border-slate-800 pt-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Leaderboards</p>

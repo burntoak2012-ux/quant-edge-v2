@@ -24,6 +24,7 @@ type StatsResponse = {
       for?: { total?: { total?: number } }
       against?: { total?: { total?: number } }
     }
+    clean_sheet?: { total?: number }
     form?: string
   }
   errors?: Record<string, string>
@@ -45,6 +46,17 @@ const POSITION_GROUPS = [
 
 function numberOrDash(value?: number) {
   return typeof value === "number" ? value : "-"
+}
+
+function summarizeForm(form?: string) {
+  const results = (form || "").toUpperCase().split("").filter((result) => "WDL".includes(result)).slice(-5)
+  const points = results.reduce((total, result) => total + (result === "W" ? 3 : result === "D" ? 1 : 0), 0)
+  let unbeaten = 0
+  for (const result of results.reverse()) {
+    if (result === "L") break
+    unbeaten += 1
+  }
+  return { results, points, unbeaten }
 }
 
 export default async function TeamPage({
@@ -111,6 +123,11 @@ export default async function TeamPage({
   const losses = stats?.fixtures?.loses?.total
   const goalsFor = stats?.goals?.for?.total?.total
   const goalsAgainst = stats?.goals?.against?.total?.total
+  const cleanSheets = stats?.clean_sheet?.total
+  const formSummary = summarizeForm(stats?.form)
+  const goalsPerGame = played && typeof goalsFor === "number" ? (goalsFor / played).toFixed(2) : "-"
+  const concededPerGame = played && typeof goalsAgainst === "number" ? (goalsAgainst / played).toFixed(2) : "-"
+  const cleanSheetRate = played && typeof cleanSheets === "number" ? `${Math.round((cleanSheets / played) * 100)}%` : "-"
   const players = playersResult?.data.response || []
   const groupedPlayers = POSITION_GROUPS.map((group) => ({
     ...group,
@@ -165,6 +182,17 @@ export default async function TeamPage({
           ) : (
             <div className="mt-5 border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">Competition statistics are unavailable for this fixture.</div>
           )}
+        </section>
+
+        <section className="mt-8 border-t border-slate-800 pt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Analyst snapshot</p>
+          <h2 className="mt-2 text-2xl font-bold">What the numbers suggest</h2>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Last five</p><p className="mt-2 text-2xl font-semibold tracking-[0.18em] text-white">{formSummary.results.join(" ") || "-"}</p><p className="mt-2 text-xs text-slate-400">{formSummary.points} points from the latest five</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Unbeaten run</p><p className="mt-2 text-2xl font-semibold text-white">{formSummary.unbeaten || "-"}</p><p className="mt-2 text-xs text-slate-400">consecutive matches</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals per game</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{goalsPerGame}</p><p className="mt-2 text-xs text-slate-400">{concededPerGame} conceded per game</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Clean sheets</p><p className="mt-2 text-2xl font-semibold text-lime-200">{cleanSheetRate}</p><p className="mt-2 text-xs text-slate-400">of completed matches</p></div>
+          </div>
         </section>
 
         <section className="mt-8 border-t border-slate-800 pt-6">

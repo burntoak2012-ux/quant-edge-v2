@@ -64,6 +64,10 @@ function eventSymbol(event: MatchEvent) {
   return event.type || "EVENT"
 }
 
+function formPoints(form?: string) {
+  return (form || "").toUpperCase().split("").filter((result) => "WDL".includes(result)).slice(-5).reduce((total, result) => total + (result === "W" ? 3 : result === "D" ? 1 : 0), 0)
+}
+
 function pitchPosition(grid?: string) {
   const [row, column] = grid?.split(":").map(Number) || []
   if (!row || !column) return null
@@ -173,6 +177,22 @@ export default async function FixturePage({
     probabilities,
     status: fixture.fixture?.status?.long,
   })
+  const homeFormPoints = formPoints(homeTeamStats?.form)
+  const awayFormPoints = formPoints(awayTeamStats?.form)
+  const homeGoalsPerGame = homeTeamStats?.fixtures?.played?.total && typeof homeTeamStats.goals?.for?.total?.total === "number"
+    ? (homeTeamStats.goals.for.total.total / homeTeamStats.fixtures.played.total).toFixed(2)
+    : "-"
+  const awayGoalsPerGame = awayTeamStats?.fixtures?.played?.total && typeof awayTeamStats.goals?.for?.total?.total === "number"
+    ? (awayTeamStats.goals.for.total.total / awayTeamStats.fixtures.played.total).toFixed(2)
+    : "-"
+  const homeConcededPerGame = homeTeamStats?.fixtures?.played?.total && typeof homeTeamStats.goals?.against?.total?.total === "number"
+    ? (homeTeamStats.goals.against.total.total / homeTeamStats.fixtures.played.total).toFixed(2)
+    : "-"
+  const awayConcededPerGame = awayTeamStats?.fixtures?.played?.total && typeof awayTeamStats.goals?.against?.total?.total === "number"
+    ? (awayTeamStats.goals.against.total.total / awayTeamStats.fixtures.played.total).toFixed(2)
+    : "-"
+  const formLeader = homeFormPoints === awayFormPoints ? "Neither side" : homeFormPoints > awayFormPoints ? homeName : awayName
+  const modelLeader = probabilities.home === probabilities.away ? "Balanced" : probabilities.home > probabilities.away ? homeName : awayName
   const kickoff = fixture.fixture?.date
     ? new Date(fixture.fixture.date).toLocaleString([], { dateStyle: "full", timeStyle: "short" })
     : "Kickoff unavailable"
@@ -221,6 +241,17 @@ export default async function FixturePage({
               <thead className="bg-slate-900 text-xs uppercase tracking-[0.12em] text-slate-500"><tr><th className="px-4 py-3">Metric</th><th className="px-4 py-3 text-cyan-200">{homeName}</th><th className="px-4 py-3 text-lime-200">{awayName}</th></tr></thead>
               <tbody>{comparisonRows.map(([label, homeValue, awayValue]) => <tr className="border-t border-slate-800" key={label}><td className="px-4 py-3 text-slate-400">{label}</td><td className="px-4 py-3 font-semibold">{homeValue ?? "-"}</td><td className="px-4 py-3 font-semibold">{awayValue ?? "-"}</td></tr>)}</tbody>
             </table>
+          </div>
+        </section>
+
+        <section className="mt-8 border-t border-slate-800 pt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Match lens</p>
+          <h2 className="mt-2 text-2xl font-bold">Where the matchup may be decided</h2>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Recent form edge</p><p className="mt-2 truncate text-lg font-semibold text-white">{formLeader}</p><p className="mt-2 text-xs text-slate-400">{homeName} {homeFormPoints}/15 · {awayName} {awayFormPoints}/15</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Model edge</p><p className="mt-2 truncate text-lg font-semibold text-cyan-200">{modelLeader}</p><p className="mt-2 text-xs text-slate-400">{probabilities.home}% home · {probabilities.draw}% draw · {probabilities.away}% away</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Attack rate</p><p className="mt-2 text-lg font-semibold text-white">{homeGoalsPerGame} <span className="text-slate-500">vs</span> {awayGoalsPerGame}</p><p className="mt-2 text-xs text-slate-400">goals per game</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Defensive rate</p><p className="mt-2 text-lg font-semibold text-lime-200">{homeConcededPerGame} <span className="text-slate-500">vs</span> {awayConcededPerGame}</p><p className="mt-2 text-xs text-slate-400">conceded per game</p></div>
           </div>
         </section>
 

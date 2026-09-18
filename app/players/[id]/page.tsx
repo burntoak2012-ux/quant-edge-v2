@@ -129,6 +129,13 @@ export default async function PlayerPage({
     interceptions: stats?.interceptions,
     isStarter: (stats?.games?.lineups || 0) > 0,
   })
+  const playerMinutes = stats?.games?.minutes || 0
+  const playerGoals = stats?.goals?.total || 0
+  const playerAssists = stats?.goals?.assists || 0
+  const playerAppearances = normalizedAppearances(playerMinutes, stats?.games?.appearences ?? stats?.games?.appearances)
+  const goalsPer90 = playerMinutes ? ((playerGoals * 90) / playerMinutes).toFixed(2) : "-"
+  const assistsPer90 = playerMinutes ? ((playerAssists * 90) / playerMinutes).toFixed(2) : "-"
+  const startRate = playerAppearances ? `${Math.round(((stats?.games?.lineups || 0) / playerAppearances) * 100)}%` : "-"
 
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
@@ -172,6 +179,17 @@ export default async function PlayerPage({
                 <p className="mt-2 text-2xl font-semibold">{display(value)}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="mt-8 border-t border-slate-800 pt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Player snapshot</p>
+          <h2 className="mt-2 text-2xl font-bold">Role and contribution</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals / 90</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{goalsPer90}</p><p className="mt-2 text-xs text-slate-400">scoring rate</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Assists / 90</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{assistsPer90}</p><p className="mt-2 text-xs text-slate-400">creative output</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Start rate</p><p className="mt-2 text-2xl font-semibold text-lime-200">{startRate}</p><p className="mt-2 text-xs text-slate-400">of appearances</p></div>
+            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Availability</p><p className="mt-2 text-2xl font-semibold text-white">{playerMinutes ? `${playerMinutes}m` : "-"}</p><p className="mt-2 text-xs text-slate-400">across {playerAppearances || "-"} appearances</p></div>
           </div>
         </section>
 
