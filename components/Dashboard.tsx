@@ -5,7 +5,9 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FiCreditCard } from "react-icons/fi"
 import SignalCard from "@/components/SignalCard"
+import MiniMatchCard from "@/components/MiniMatchCard"
 import { LEAGUES } from "@/lib/leagues"
+import { getLeagueImportance } from "@/lib/leagueImportance"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
 import BrandMark from "@/components/BrandMark"
 import { SavedBriefsPanel } from "@/components/SavedBriefs"
@@ -79,6 +81,7 @@ export default function Dashboard() {
   const [error, setError] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [expandedFixtures, setExpandedFixtures] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -151,6 +154,32 @@ export default function Dashboard() {
       }
       return [{ id: teamId, name: teamName }, ...current].slice(0, 12)
     })
+  }
+
+  function toggleExpand(fixtureId: number) {
+    setExpandedFixtures((current) => {
+      const next = new Set(current)
+      if (next.has(fixtureId)) {
+        next.delete(fixtureId)
+      } else {
+        next.add(fixtureId)
+      }
+      return next
+    })
+  }
+
+  const leagueGroups = Object.values(
+    visibleMatches.reduce<Record<number, { leagueId: number; leagueName: string; leagueLogo: string | null; matches: Match[] }>>((groups, match) => {
+      if (!groups[match.leagueId]) {
+        groups[match.leagueId] = { leagueId: match.leagueId, leagueName: match.leagueName, leagueLogo: match.leagueLogo, matches: [] }
+      }
+      groups[match.leagueId].matches.push(match)
+      return groups
+    }, {})
+  ).sort((a, b) => getLeagueImportance(a.leagueId) - getLeagueImportance(b.leagueId))
+
+  for (const group of leagueGroups) {
+    group.matches.sort((a, b) => new Date(a.kickoff || 0).getTime() - new Date(b.kickoff || 0).getTime())
   }
 
   return (
@@ -316,15 +345,49 @@ export default function Dashboard() {
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
         {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">{t.noFixtures}</p><p className="mt-2 text-sm text-slate-400">{t.checkBack}</p></div>}
         {!loading && !error && matches.length > 0 && visibleMatches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">{t.noMatching}</p><p className="mt-2 text-sm text-slate-400">{t.tryDifferent}</p></div>}
-        {!loading && !error && visibleMatches.length > 0 && <div className="grid gap-5">{visibleMatches.map((match) => (
-          <SignalCard
-            {...match}
-            combinedLineupTotal={match.combinedLineupTotals?.combinedTotal}
-            isWatchedHome={watchedTeamIds.has(match.homeTeamId)}
-            isWatchedAway={watchedTeamIds.has(match.awayTeamId)}
-            key={match.fixtureId}
-            onToggleWatchlist={toggleWatchlist}
-          />
+        {!loading && !error && visibleMatches.length > 0 && <div className="space-y-8">{leagueGroups.map((group) => (
+          <div key={group.leagueId}>
+            <div className="mb-3 flex items-center gap-2">
+              {group.leagueLogo && <img alt="" className="h-6 w-6 object-contain" src={group.leagueLogo} />}
+              <h2 className="text-lg font-bold text-white">{group.leagueName}</h2>
+            </div>
+            <div className="space-y-2">
+              {group.matches.map((match) => {
+                const isExpanded = expandedFixtures.has(match.fixtureId)
+                const kickoffLabel = match.statusCode === "NS"
+                  ? (match.kickoff ? new Date(match.kickoff).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Scheduled")
+                  : `${match.homeGoals ?? "-"}:${match.awayGoals ?? "-"} \u00b7 ${match.status}`
+
+                return (
+                  <div key={match.fixtureId}>
+                    <button
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-left hover:border-cyan-400/50"
+                      onClick={() => toggleExpand(match.fixtureId)}
+                      type="button"
+                    >
+                      <span className="truncate font-semibold text-white">{match.homeTeam} v {match.awayTeam}</span>
+                      <span className="shrink-0 text-xs text-slate-400">{kickoffLabel}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-2">
+                        {match.accessLevel === "pro" ? (
+                          <SignalCard
+                            {...match}
+                            combinedLineupTotal={match.combinedLineupTotals?.combinedTotal}
+                            isWatchedHome={watchedTeamIds.has(match.homeTeamId)}
+                            isWatchedAway={watchedTeamIds.has(match.awayTeamId)}
+                            onToggleWatchlist={toggleWatchlist}
+                          />
+                        ) : (
+                          <MiniMatchCard {...match} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         ))}</div>}
       </div>
     </main>
