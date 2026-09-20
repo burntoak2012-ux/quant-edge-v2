@@ -64,10 +64,6 @@ export default function Home() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Trusted by curious football minds</p>
             <div className="mt-5 space-y-4">
               <div>
-                <p className="text-3xl font-bold text-white">2 free match cards</p>
-                <p className="mt-1 text-sm text-slate-300">Try the product before deciding on Pro.</p>
-              </div>
-              <div>
                 <p className="text-3xl font-bold text-lime-300">£9.99</p>
                 <p className="mt-1 text-sm text-slate-300">A simple monthly plan for deeper football research.</p>
               </div>
