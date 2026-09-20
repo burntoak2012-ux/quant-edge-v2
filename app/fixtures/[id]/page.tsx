@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 import { calculateMatchProbabilities } from "@/lib/matchProbability"
+import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { SaveBriefButton } from "@/components/SavedBriefs"
 import { fetchLineups } from "@/lib/fetchLineups"
 
@@ -176,6 +177,13 @@ export default async function FixturePage({
   const liveStatTypes = Array.from(new Set([...homeLiveStats, ...awayLiveStats].map((stat) => stat.type).filter(Boolean)))
   const lineups = lineupsResponse || []
   const hasConfirmedLineups = lineups.length > 0 && lineups.every((lineup) => !lineup.isProjected)
+  const homeLineup = lineups.find((lineup) => lineup.team?.name === homeName)
+  const awayLineup = lineups.find((lineup) => lineup.team?.name === awayName)
+  const homeLineupTotal = homeLineup ? calculateLineupRating(homeLineup.startXI || []).total : null
+  const awayLineupTotal = awayLineup ? calculateLineupRating(awayLineup.startXI || []).total : null
+  const strongerLineupTeam = homeLineupTotal !== null && awayLineupTotal !== null
+    ? (homeLineupTotal > awayLineupTotal ? homeName : awayLineupTotal > homeLineupTotal ? awayName : null)
+    : null
   const events = eventsResponse?.response || []
   const researchNotes = compileResearchBrief({
     homeName,
@@ -226,6 +234,26 @@ export default async function FixturePage({
             <SaveBriefButton fixtureId={fixtureId} homeTeam={homeName} awayTeam={awayName} />
           </div>
         </header>
+
+        <section className="qe-panel mt-8 rounded-3xl border border-lime-300/30 bg-lime-300/5 p-6 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Team strength</p>
+          <h2 className="mt-2 text-2xl font-bold">Combined lineup rating</h2>
+          <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center">
+            <div>
+              <p className={`text-4xl font-bold ${strongerLineupTeam === homeName ? "text-lime-300" : "text-white"}`}>{homeLineupTotal ?? "-"}</p>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-200">{homeName}</p>
+            </div>
+            <p className="text-sm text-slate-500">vs</p>
+            <div>
+              <p className={`text-4xl font-bold ${strongerLineupTeam === awayName ? "text-lime-300" : "text-white"}`}>{awayLineupTotal ?? "-"}</p>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-200">{awayName}</p>
+            </div>
+          </div>
+          <p className="mt-6 text-center text-sm text-slate-300">
+            {strongerLineupTeam ? `${strongerLineupTeam} has the stronger lineup on paper.` : "Both lineups rate evenly on paper."}
+          </p>
+          <p className="mt-3 border-t border-lime-300/10 pt-4 text-center text-xs text-slate-500">Sum of individual player ratings from the {hasConfirmedLineups ? "confirmed" : "projected"} starting XI. A simple strength read before the deeper stats below.</p>
+        </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-2">
           <div className="qe-panel rounded-2xl border border-cyan-400/20 bg-slate-900/60 p-6">

@@ -163,6 +163,8 @@ console.log("API ERRORS:", data.errors)
           : "unavailable"
         const homeProjectedRating = findProjectedRating(projectedLineups, item.teams.home.name)
         const awayProjectedRating = findProjectedRating(projectedLineups, item.teams.away.name)
+        const homeLineupTotal = projectedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.home.name)?.total ?? null
+        const awayLineupTotal = projectedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.away.name)?.total ?? null
         const matchOdds = oddsEntries[index]
 
         const signalHomeRating = homeProjectedRating || homeRating
@@ -240,6 +242,8 @@ console.log("API ERRORS:", data.errors)
           awayRating,
           homeProjectedRating,
           awayProjectedRating,
+          homeLineupTotal,
+          awayLineupTotal,
           projectedLineups,
           lineupStatus,
           hasLineups: Boolean(projectedLineups?.length),
@@ -307,20 +311,24 @@ console.log("API ERRORS:", data.errors)
 async function fetchProjectedLineupRatings(fixtureId: number, homeName?: string, awayName?: string, homeTeamId?: number, awayTeamId?: number, season?: number) {
   try {
     const lineups = await fetchLineups(fixtureId, { home: homeName, away: awayName, homeTeamId, awayTeamId, season })
-    const ratings = (lineups as ApiLineup[]).map((lineup) => ({
-      team: lineup.team?.name || "Team",
-      rating: calculateLineupRating(lineup.startXI || []).average,
-      formation: lineup.formation || null,
-      isProjected: Boolean(lineup.isProjected),
-      players: (lineup.startXI || []).map((player) => ({
-        name: player.player?.name || player.name || "Unknown player",
-        photo: player.player?.photo || null,
-        position: player.position || player.player?.pos || player.player?.position || "MID",
-        grid: player.player?.grid || null,
-        number: player.player?.number ?? null,
-        rating: calculateLineupRating([player]).players[0]?.rating || null,
-      })),
-    }))
+    const ratings = (lineups as ApiLineup[]).map((lineup) => {
+      const lineupRating = calculateLineupRating(lineup.startXI || [])
+      return {
+        team: lineup.team?.name || "Team",
+        rating: lineupRating.average,
+        total: lineupRating.total,
+        formation: lineup.formation || null,
+        isProjected: Boolean(lineup.isProjected),
+        players: (lineup.startXI || []).map((player) => ({
+          name: player.player?.name || player.name || "Unknown player",
+          photo: player.player?.photo || null,
+          position: player.position || player.player?.pos || player.player?.position || "MID",
+          grid: player.player?.grid || null,
+          number: player.player?.number ?? null,
+          rating: calculateLineupRating([player]).players[0]?.rating || null,
+        })),
+      }
+    })
 
     return ratings.length > 0 ? ratings : null
   } catch (error) {

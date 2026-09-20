@@ -5,6 +5,7 @@ export function calculateLineupRating(players: LineupPlayer[]) {
   if (!players || players.length === 0) {
     return {
       average: 70,
+      total: 0,
       players: [],
     }
   }
@@ -33,6 +34,7 @@ export function calculateLineupRating(players: LineupPlayer[]) {
 
   return {
     average: Math.round(total / players.length),
+    total: Math.round(total),
     players: playerBreakdown,
   }
 }

@@ -4,8 +4,6 @@ import { useUser, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FiCreditCard } from "react-icons/fi"
-import SignalCard from "@/components/SignalCard"
-import MiniMatchCard from "@/components/MiniMatchCard"
 import { LEAGUES } from "@/lib/leagues"
 import { getLeagueImportance } from "@/lib/leagueImportance"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
@@ -45,6 +43,8 @@ type Match = {
   awayRating: number
   homeProjectedRating: number | null
   awayProjectedRating: number | null
+  homeLineupTotal: number | null
+  awayLineupTotal: number | null
   projectedLineups: Array<{ team: string; rating: number; formation: string | null; isProjected: boolean; players: Array<{ name: string; photo: string | null; position: string; grid: string | null; number: number | null; rating: number | null }> }> | null
   lineupStatus: "confirmed" | "projected" | "unavailable"
   hasLineups: boolean
@@ -81,7 +81,6 @@ export default function Dashboard() {
   const [error, setError] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [expandedFixtures, setExpandedFixtures] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -153,18 +152,6 @@ export default function Dashboard() {
         return current.filter((item) => item.id !== teamId)
       }
       return [{ id: teamId, name: teamName }, ...current].slice(0, 12)
-    })
-  }
-
-  function toggleExpand(fixtureId: number) {
-    setExpandedFixtures((current) => {
-      const next = new Set(current)
-      if (next.has(fixtureId)) {
-        next.delete(fixtureId)
-      } else {
-        next.add(fixtureId)
-      }
-      return next
     })
   }
 
@@ -353,37 +340,25 @@ export default function Dashboard() {
             </div>
             <div className="space-y-2">
               {group.matches.map((match) => {
-                const isExpanded = expandedFixtures.has(match.fixtureId)
                 const kickoffLabel = match.statusCode === "NS"
                   ? (match.kickoff ? new Date(match.kickoff).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Scheduled")
                   : `${match.homeGoals ?? "-"}:${match.awayGoals ?? "-"} \u00b7 ${match.status}`
+                const strongerTeam = match.homeLineupTotal !== null && match.awayLineupTotal !== null
+                  ? (match.homeLineupTotal > match.awayLineupTotal ? match.homeTeam : match.awayLineupTotal > match.homeLineupTotal ? match.awayTeam : null)
+                  : null
 
                 return (
-                  <div key={match.fixtureId}>
-                    <button
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-left hover:border-cyan-400/50"
-                      onClick={() => toggleExpand(match.fixtureId)}
-                      type="button"
-                    >
-                      <span className="truncate font-semibold text-white">{match.homeTeam} v {match.awayTeam}</span>
-                      <span className="shrink-0 text-xs text-slate-400">{kickoffLabel}</span>
-                    </button>
-                    {isExpanded && (
-                      <div className="mt-2">
-                        {match.accessLevel === "pro" ? (
-                          <SignalCard
-                            {...match}
-                            combinedLineupTotal={match.combinedLineupTotals?.combinedTotal}
-                            isWatchedHome={watchedTeamIds.has(match.homeTeamId)}
-                            isWatchedAway={watchedTeamIds.has(match.awayTeamId)}
-                            onToggleWatchlist={toggleWatchlist}
-                          />
-                        ) : (
-                          <MiniMatchCard {...match} />
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <Link
+                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-left hover:border-cyan-400/50"
+                    href={`/fixtures/${match.fixtureId}?home=${match.homeTeamId}&away=${match.awayTeamId}&league=${match.leagueId}&homeRating=${match.homeProjectedRating || match.homeRating}&awayRating=${match.awayProjectedRating || match.awayRating}`}
+                    key={match.fixtureId}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-white">{match.homeTeam} v {match.awayTeam}</span>
+                      {strongerTeam && <span className="mt-0.5 block text-[11px] text-lime-300">Stronger lineup: {strongerTeam}</span>}
+                    </span>
+                    <span className="shrink-0 text-xs text-slate-400">{kickoffLabel}</span>
+                  </Link>
                 )
               })}
             </div>
