@@ -68,10 +68,13 @@ function formPoints(form?: string) {
   return (form || "").toUpperCase().split("").filter((result) => "WDL".includes(result)).slice(-5).reduce((total, result) => total + (result === "W" ? 3 : result === "D" ? 1 : 0), 0)
 }
 
-function pitchPosition(grid?: string) {
-  const [row, column] = grid?.split(":").map(Number) || []
-  if (!row || !column) return null
-  return { top: `${((row - 1) / 10) * 88 + 6}%`, left: `${((column - 1) / 6) * 82 + 9}%` }
+function positionGroup(position: string) {
+  const value = position.toLowerCase()
+  if (value.includes("gk") || value.includes("goal")) return "goalkeeper"
+  if (value.includes("def") || value.includes("back")) return "defender"
+  if (value.includes("mid")) return "midfielder"
+  if (value.includes("att") || value.includes("for") || value.includes("strik") || value.includes("wing")) return "forward"
+  return "midfielder"
 }
 
 function compileResearchBrief({
@@ -290,7 +293,67 @@ export default async function FixturePage({
           <div className="qe-panel rounded-2xl border p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Lineup board</p>
             <h2 className="mt-2 text-2xl font-bold">Formation pitch</h2>
-            {lineups.length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{lineups.map((lineup) => <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3" key={lineup.team?.name}><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">{lineup.team?.name || "Team"}</p><p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">{lineup.formation || "Formation unavailable"}</p></div><span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">XI {lineup.startXI?.length || 0}</span></div><div className="relative aspect-[5/7] overflow-hidden rounded-xl border border-slate-700 bg-[radial-gradient(circle_at_center,_rgba(34,197,94,0.20),_rgba(2,6,23,0.95)_56%)]"><div className="absolute inset-0 opacity-80" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.10) 1px, transparent 1px)", backgroundSize: "100% 20%, 14% 100%" }} /><div className="absolute left-1/2 top-1/2 h-[72%] w-[66%] -translate-x-1/2 -translate-y-1/2 rounded-[40%] border border-white/20" /><div className="absolute left-1/2 top-1/2 h-[40%] w-[52%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/15" /><div className="absolute left-1/2 top-[12%] h-3 w-3 -translate-x-1/2 rounded-full border border-white/60 bg-white/80" /><div className="absolute left-1/2 top-[50%] h-[38%] w-px -translate-x-1/2 bg-white/30" /><div className="absolute left-[16%] top-[18%] h-[55%] w-[18%] rounded-full border border-white/12" /><div className="absolute right-[16%] top-[18%] h-[55%] w-[18%] rounded-full border border-white/12" />{lineup.startXI?.map((player, index) => { const position = pitchPosition(player.player?.grid); return position ? <span className="absolute -translate-x-1/2 -translate-y-1/2 text-center" key={`${player.player?.name}-${index}`} style={position}><span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-cyan-300 text-[9px] font-bold text-slate-950 shadow-lg shadow-cyan-900/40">{player.player?.pos || "?"}</span><span className="mt-1 block max-w-16 truncate text-[9px] font-semibold text-white">{player.player?.name}</span></span> : null })}</div><div className="mt-3 space-y-1.5">{lineup.startXI?.slice(0, 11).map((player, index) => <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5 text-[11px]" key={`${player.player?.name}-${index}`}><span className="text-slate-400">{player.player?.pos || "-"}</span><span className="truncate text-slate-200">{player.player?.name}</span></div>)}</div></div>)}</div> : <div className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 text-sm text-amber-100"><p className="font-semibold text-amber-200">No lineup data available for this fixture</p><p className="mt-1 text-amber-50/80">This usually means the provider has not published confirmed team sheets for this match yet, or the historical fixture does not have XI data available upstream.</p></div>}
+            {lineups.length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{lineups.map((lineup) => {
+              const isHome = lineup.team?.name === homeName
+              const kitTone = isHome
+                ? "border-cyan-200/70 bg-gradient-to-b from-cyan-400 to-cyan-600 text-slate-950"
+                : "border-amber-200/70 bg-gradient-to-b from-amber-400 to-orange-600 text-slate-950"
+              const players = (lineup.startXI || []).slice(0, 11).map((player) => {
+                const position = player.player?.pos || player.position || "MID"
+                return {
+                  name: player.player?.name || "Unknown player",
+                  number: player.player?.number ?? null,
+                  position,
+                  group: positionGroup(position),
+                }
+              })
+              const rows = (["forward", "midfielder", "defender", "goalkeeper"] as const)
+                .map((group) => ({ group, players: players.filter((player) => player.group === group) }))
+                .filter((row) => row.players.length > 0)
+
+              return <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3" key={lineup.team?.name}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{lineup.team?.name || "Team"}</p>
+                    <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">{lineup.formation || "Formation unavailable"}</p>
+                  </div>
+                  <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">XI {lineup.startXI?.length || 0}</span>
+                </div>
+                <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-emerald-200/25 bg-gradient-to-b from-[#1e8a5c] via-[#187249] to-[#0d3f28] shadow-inner shadow-black/30">
+                  <div className="absolute inset-0 opacity-25" style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 12.5%, transparent 12.5%, transparent 25%)" }} />
+                  <div className="absolute inset-[4%] rounded-sm border border-white/35" />
+                  <div className="absolute inset-x-[4%] top-1/2 h-px bg-white/35" />
+                  <div className="absolute left-1/2 top-1/2 h-[16%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/35" />
+                  <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/60" />
+                  <div className="absolute left-1/2 top-[4%] h-[14%] w-[42%] -translate-x-1/2 border border-t-0 border-white/35" />
+                  <div className="absolute left-1/2 top-[4%] h-[6%] w-[18%] -translate-x-1/2 border border-t-0 border-white/35" />
+                  <div className="absolute bottom-[4%] left-1/2 h-[14%] w-[42%] -translate-x-1/2 border border-b-0 border-white/35" />
+                  <div className="absolute bottom-[4%] left-1/2 h-[6%] w-[18%] -translate-x-1/2 border border-b-0 border-white/35" />
+                  <div className="relative z-10 flex h-full flex-col justify-around py-4">
+                    {rows.map((row) => (
+                      <div className="flex justify-evenly px-2" key={row.group}>
+                        {row.players.map((player, index) => (
+                          <div className="flex flex-col items-center gap-1" key={`${player.name}-${index}`}>
+                            <span className={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 text-xs font-bold shadow-md shadow-black/50 ${kitTone}`}>
+                              {player.number ?? player.position.slice(0, 1)}
+                            </span>
+                            <span className="max-w-[70px] truncate rounded bg-slate-950/80 px-1 text-[9px] font-semibold leading-4 text-white">{player.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px] text-slate-200">
+                  {players.map((player, index) => (
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1" key={`${player.name}-list-${index}`}>
+                      <span className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300">{player.position}</span>
+                      <span className="truncate font-medium text-slate-100">{player.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            })}</div> : <div className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 text-sm text-amber-100"><p className="font-semibold text-amber-200">No lineup data available for this fixture</p><p className="mt-1 text-amber-50/80">This usually means the provider has not published confirmed team sheets for this match yet, or the historical fixture does not have XI data available upstream.</p></div>}
           </div>
 
           <div className="qe-panel rounded-2xl border p-6">

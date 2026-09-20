@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useLanguage } from "@/components/LanguageProvider"
 
 type Props = {
@@ -88,7 +87,6 @@ export default function SignalCard({
   isWatchedAway = false,
   onToggleWatchlist,
 }: Props) {
-  const router = useRouter()
   const { t } = useLanguage()
   const [showHelp, setShowHelp] = useState(false)
   const hasProjectedLineups = Boolean(projectedLineups && projectedLineups.length > 0)
@@ -233,26 +231,14 @@ export default function SignalCard({
   ]
 
   return (
-    <div
-      aria-label={`Open match brief for ${homeTeam} versus ${awayTeam}`}
-      className="qe-panel qe-reveal cursor-pointer rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-7"
-      onClick={() => router.push(`/fixtures/${fixtureId}?home=${homeTeamId}&away=${awayTeamId}&league=${leagueId}&homeRating=${homeProjectedRating || homeRating}&awayRating=${awayProjectedRating || awayRating}`)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault()
-          router.push(`/fixtures/${fixtureId}?home=${homeTeamId}&away=${awayTeamId}&league=${leagueId}&homeRating=${homeProjectedRating || homeRating}&awayRating=${awayProjectedRating || awayRating}`)
-        }
-      }}
-      role="link"
-      tabIndex={0}
-    >
+    <div className="qe-panel qe-reveal rounded-3xl border p-6 shadow-xl shadow-black/20 sm:p-7">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${["1H", "2H", "HT", "ET", "BT"].includes(statusCode) ? "bg-lime-300 shadow-[0_0_12px_rgba(199,243,107,0.9)]" : "bg-cyan-300"}`} /><p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">{leagueName}</p>{leagueLogo && <img alt="" className="ml-auto h-5 w-5 object-contain" src={leagueLogo} />}</div>
           <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-            <Link className="min-w-0 hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{homeLogo && <img alt="" className="mx-auto mb-2 h-10 w-10 object-contain" src={homeLogo} />}<p className="truncate text-base font-bold sm:text-lg">{homeTeam}</p></Link>
+            <Link className="min-w-0 hover:text-cyan-300" href={`/teams/${homeTeamId}?league=${leagueId}`}>{homeLogo && <img alt="" className="mx-auto mb-2 h-10 w-10 object-contain" src={homeLogo} />}<p className="truncate text-base font-bold sm:text-lg">{homeTeam}</p></Link>
             <div><p className="text-3xl font-bold tracking-wide text-white">{homeGoals ?? "-"}<span className="mx-2 text-slate-600">:</span>{awayGoals ?? "-"}</p><p className="mt-1 text-xs font-semibold text-cyan-200">{elapsed ? `${elapsed}'` : statusCode === "NS" ? "Scheduled" : status}</p></div>
-            <Link className="min-w-0 hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`} onClick={(event) => event.stopPropagation()}>{awayLogo && <img alt="" className="mx-auto mb-2 h-10 w-10 object-contain" src={awayLogo} />}<p className="truncate text-base font-bold sm:text-lg">{awayTeam}</p></Link>
+            <Link className="min-w-0 hover:text-cyan-300" href={`/teams/${awayTeamId}?league=${leagueId}`}>{awayLogo && <img alt="" className="mx-auto mb-2 h-10 w-10 object-contain" src={awayLogo} />}<p className="truncate text-base font-bold sm:text-lg">{awayTeam}</p></Link>
           </div>
           <p className="mt-4 text-center text-xs text-slate-400">{kickoff ? new Date(kickoff).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Kickoff unavailable"}{round && <><span className="mx-2 text-slate-600">•</span>{round}</>}{venue && <><span className="mx-2 text-slate-600">•</span>{venue}</>}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -479,8 +465,6 @@ export default function SignalCard({
 
       <div className="border-t border-slate-800 pt-4 text-xs text-slate-500">
         <span>Fixture #{fixtureId}</span>
-        <span className="mx-2 text-slate-700">•</span>
-        <span className="text-cyan-300">Open match brief</span>
         <span className="mx-2 text-slate-700">•</span>
         <span>Use this as research, not a betting instruction.</span>
       </div>
