@@ -2,13 +2,15 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { requireActiveSubscription } from "@/lib/requireSubscription"
 import { calculateMatchProbabilities } from "@/lib/matchProbability"
+import { SaveBriefButton } from "@/components/SavedBriefs"
+import { fetchLineups } from "@/lib/fetchLineups"
 
 const API_URL = "https://v3.football.api-sports.io"
 
 type FixtureResponse = {
   response?: Array<{
     fixture?: { id?: number; date?: string; status?: { long?: string; short?: string }; venue?: { name?: string; city?: string } }
-    league?: { name?: string; country?: string; round?: string }
+    league?: { name?: string; country?: string; round?: string; season?: number }
     teams?: { home?: { id?: number; name?: string }; away?: { id?: number; name?: string } }
   }>
 }
@@ -28,8 +30,6 @@ type HeadToHeadFixture = { fixture?: { date?: string; status?: { short?: string 
 type HeadToHeadResponse = { response?: HeadToHeadFixture[] }
 type MatchStatistic = { type?: string; value?: string | number | null }
 type LiveStatisticResponse = { response?: Array<{ team?: { name?: string }; statistics?: MatchStatistic[] }> }
-type LineupPlayer = { player?: { name?: string; pos?: string; grid?: string }; position?: string }
-type LineupResponse = { response?: Array<{ team?: { name?: string }; formation?: string; startXI?: LineupPlayer[] }> }
 type MatchEvent = { time?: { elapsed?: number | null; extra?: number | null }; team?: { name?: string }; player?: { name?: string }; assist?: { name?: string | null }; type?: string; detail?: string; comments?: string | null }
 type EventsResponse = { response?: MatchEvent[] }
 
@@ -143,7 +143,13 @@ export default async function FixturePage({
     leagueId ? fetchTeamStats(awayId, leagueId, apiKey) : Promise.resolve(null),
     fetch(`${API_URL}/fixtures/headtohead?h2h=${homeId}-${awayId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 21600 } }).then((result) => result.json() as Promise<HeadToHeadResponse>).catch(() => null),
     fetch(`${API_URL}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LiveStatisticResponse>).catch(() => null),
-    fetch(`${API_URL}/fixtures/lineups?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LineupResponse>).catch(() => null),
+    fetchLineups(fixtureId, {
+      home: homeName,
+      away: awayName,
+      homeTeamId: homeId,
+      awayTeamId: awayId,
+      season: fixture.league?.season || new Date().getUTCFullYear(),
+    }),
     fetch(`${API_URL}/fixtures/events?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<EventsResponse>).catch(() => null),
   ])
   const homeTeamStats = homeStats
@@ -165,7 +171,8 @@ export default async function FixturePage({
   const homeLiveStats = liveStats.find((entry) => entry.team?.name === homeName)?.statistics || []
   const awayLiveStats = liveStats.find((entry) => entry.team?.name === awayName)?.statistics || []
   const liveStatTypes = Array.from(new Set([...homeLiveStats, ...awayLiveStats].map((stat) => stat.type).filter(Boolean)))
-  const lineups = lineupsResponse?.response || []
+  const lineups = lineupsResponse || []
+  const hasConfirmedLineups = lineups.length > 0 && lineups.every((lineup) => !lineup.isProjected)
   const events = eventsResponse?.response || []
   const researchNotes = compileResearchBrief({
     homeName,
@@ -205,14 +212,20 @@ export default async function FixturePage({
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">{fixture.league?.name || "Competition"}</p>
           <h1 className="mt-3 text-4xl font-bold">{homeName} <span className="text-slate-500">vs</span> {awayName}</h1>
           <p className="mt-3 text-sm text-slate-400">{kickoff} <span className="mx-2 text-slate-600">•</span> {fixture.fixture?.status?.long || "Scheduled"}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">{fixture.league?.country || "Global"}</span>
+            <span className="rounded-full border border-lime-400/30 bg-lime-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">{fixture.league?.round || "Fixture brief"}</span>
+            <span className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">{fixture.fixture?.venue?.name || "Venue unavailable"}</span>
+          </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-300/10" href={`/teams/${homeId}?league=${league || ""}`}>View {homeName}</Link>
             <Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-300/10" href={`/teams/${awayId}?league=${league || ""}`}>View {awayName}</Link>
+            <SaveBriefButton fixtureId={fixtureId} homeTeam={homeName} awayTeam={awayName} />
           </div>
         </header>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="qe-panel rounded-2xl border p-6">
+          <div className="qe-panel rounded-2xl border border-cyan-400/20 bg-slate-900/60 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Decision context</p>
             <h2 className="mt-2 text-2xl font-bold">Model probability split</h2>
             <div className="mt-6 space-y-5">
@@ -223,7 +236,7 @@ export default async function FixturePage({
             <p className="mt-6 border-t border-slate-800 pt-4 text-xs text-slate-500">These are analytical estimates, not betting instructions or guarantees. Ratings and lineup context may update before kickoff.</p>
           </div>
 
-          <div className="qe-panel rounded-2xl border p-6">
+          <div className="qe-panel rounded-2xl border border-lime-400/20 bg-slate-900/60 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Live research brief</p>
             <h2 className="mt-2 text-2xl font-bold">What changed for this fixture</h2>
             <ul className="mt-6 space-y-4 text-sm text-slate-300">
@@ -248,10 +261,10 @@ export default async function FixturePage({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Match lens</p>
           <h2 className="mt-2 text-2xl font-bold">Where the matchup may be decided</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Recent form edge</p><p className="mt-2 truncate text-lg font-semibold text-white">{formLeader}</p><p className="mt-2 text-xs text-slate-400">{homeName} {homeFormPoints}/15 · {awayName} {awayFormPoints}/15</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Model edge</p><p className="mt-2 truncate text-lg font-semibold text-cyan-200">{modelLeader}</p><p className="mt-2 text-xs text-slate-400">{probabilities.home}% home · {probabilities.draw}% draw · {probabilities.away}% away</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Attack rate</p><p className="mt-2 text-lg font-semibold text-white">{homeGoalsPerGame} <span className="text-slate-500">vs</span> {awayGoalsPerGame}</p><p className="mt-2 text-xs text-slate-400">goals per game</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Defensive rate</p><p className="mt-2 text-lg font-semibold text-lime-200">{homeConcededPerGame} <span className="text-slate-500">vs</span> {awayConcededPerGame}</p><p className="mt-2 text-xs text-slate-400">conceded per game</p></div>
+          <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Recent form edge</p><p className="mt-2 truncate text-lg font-semibold text-white">{formLeader}</p><p className="mt-2 text-xs text-slate-400">{homeName} {homeFormPoints}/15 · {awayName} {awayFormPoints}/15</p></div>
+          <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Model edge</p><p className="mt-2 truncate text-lg font-semibold text-cyan-200">{modelLeader}</p><p className="mt-2 text-xs text-slate-400">{probabilities.home}% home · {probabilities.draw}% draw · {probabilities.away}% away</p></div>
+          <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Attack rate</p><p className="mt-2 text-lg font-semibold text-white">{homeGoalsPerGame} <span className="text-slate-500">vs</span> {awayGoalsPerGame}</p><p className="mt-2 text-xs text-slate-400">goals per game</p></div>
+          <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Defensive rate</p><p className="mt-2 text-lg font-semibold text-lime-200">{homeConcededPerGame} <span className="text-slate-500">vs</span> {awayConcededPerGame}</p><p className="mt-2 text-xs text-slate-400">conceded per game</p></div>
           </div>
         </section>
 
@@ -268,7 +281,7 @@ export default async function FixturePage({
 
           <div className="qe-panel rounded-2xl border p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Team sheets</p>
-            <h2 className="mt-2 text-2xl font-bold">Confirmed lineups</h2>
+            <h2 className="mt-2 text-2xl font-bold">{hasConfirmedLineups ? "Confirmed lineups" : "Projected lineups"}</h2>
             {lineups.length > 0 ? <div className="mt-5 space-y-5">{lineups.map((lineup) => <div key={lineup.team?.name}><p className="font-semibold text-white">{lineup.team?.name || "Team"} <span className="ml-2 text-xs font-normal text-slate-500">{lineup.formation || "Formation unavailable"}</span></p><p className="mt-2 text-sm leading-7 text-slate-300">{lineup.startXI?.map((player) => player.player?.name).filter(Boolean).join(" · ") || "Starting XI unavailable"}</p></div>)}</div> : <p className="mt-5 text-sm text-slate-400">Confirmed lineups will appear here when published.</p>}
           </div>
         </section>
@@ -277,7 +290,7 @@ export default async function FixturePage({
           <div className="qe-panel rounded-2xl border p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-300">Lineup board</p>
             <h2 className="mt-2 text-2xl font-bold">Formation pitch</h2>
-            {lineups.length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{lineups.map((lineup) => <div key={lineup.team?.name}><p className="mb-2 text-sm font-semibold">{lineup.team?.name} <span className="text-xs font-normal text-slate-500">{lineup.formation}</span></p><div className="relative aspect-[3/5] overflow-hidden rounded-xl border border-lime-300/30 bg-emerald-900/70" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px)", backgroundSize: "100% 20%, 25% 100%" }}>{lineup.startXI?.map((player, index) => { const position = pitchPosition(player.player?.grid); return position ? <span className="absolute -translate-x-1/2 -translate-y-1/2 text-center" key={`${player.player?.name}-${index}`} style={position}><span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-cyan-300 text-[10px] font-bold text-slate-950">{player.player?.pos || "?"}</span><span className="mt-1 block max-w-16 truncate text-[9px] font-semibold text-white">{player.player?.name}</span></span> : null })}</div></div>)}</div> : <p className="mt-5 text-sm text-slate-400">Formation pitch will appear when confirmed XI coordinates are published.</p>}
+            {lineups.length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{lineups.map((lineup) => <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3" key={lineup.team?.name}><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">{lineup.team?.name || "Team"}</p><p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">{lineup.formation || "Formation unavailable"}</p></div><span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">XI {lineup.startXI?.length || 0}</span></div><div className="relative aspect-[5/7] overflow-hidden rounded-xl border border-slate-700 bg-[radial-gradient(circle_at_center,_rgba(34,197,94,0.20),_rgba(2,6,23,0.95)_56%)]"><div className="absolute inset-0 opacity-80" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.10) 1px, transparent 1px)", backgroundSize: "100% 20%, 14% 100%" }} /><div className="absolute left-1/2 top-1/2 h-[72%] w-[66%] -translate-x-1/2 -translate-y-1/2 rounded-[40%] border border-white/20" /><div className="absolute left-1/2 top-1/2 h-[40%] w-[52%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/15" /><div className="absolute left-1/2 top-[12%] h-3 w-3 -translate-x-1/2 rounded-full border border-white/60 bg-white/80" /><div className="absolute left-1/2 top-[50%] h-[38%] w-px -translate-x-1/2 bg-white/30" /><div className="absolute left-[16%] top-[18%] h-[55%] w-[18%] rounded-full border border-white/12" /><div className="absolute right-[16%] top-[18%] h-[55%] w-[18%] rounded-full border border-white/12" />{lineup.startXI?.map((player, index) => { const position = pitchPosition(player.player?.grid); return position ? <span className="absolute -translate-x-1/2 -translate-y-1/2 text-center" key={`${player.player?.name}-${index}`} style={position}><span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-cyan-300 text-[9px] font-bold text-slate-950 shadow-lg shadow-cyan-900/40">{player.player?.pos || "?"}</span><span className="mt-1 block max-w-16 truncate text-[9px] font-semibold text-white">{player.player?.name}</span></span> : null })}</div><div className="mt-3 space-y-1.5">{lineup.startXI?.slice(0, 11).map((player, index) => <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5 text-[11px]" key={`${player.player?.name}-${index}`}><span className="text-slate-400">{player.player?.pos || "-"}</span><span className="truncate text-slate-200">{player.player?.name}</span></div>)}</div></div>)}</div> : <div className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 text-sm text-amber-100"><p className="font-semibold text-amber-200">No lineup data available for this fixture</p><p className="mt-1 text-amber-50/80">This usually means the provider has not published confirmed team sheets for this match yet, or the historical fixture does not have XI data available upstream.</p></div>}
           </div>
 
           <div className="qe-panel rounded-2xl border p-6">

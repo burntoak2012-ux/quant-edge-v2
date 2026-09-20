@@ -35,6 +35,7 @@ export default function AboutPage() {
         <section className="mt-12 border-t border-cyan-100/10 py-8 text-sm leading-7 text-slate-400">
           <p><strong className="text-slate-200">Our promise:</strong> make evidence easier to inspect, assumptions easier to question, and uncertainty harder to ignore.</p>
           <p className="mt-3">Use Quant Edge responsibly. Never stake more than you can afford to lose.</p>
+          <p className="mt-3">Customer service: <a className="text-cyan-300 hover:underline" href="mailto:quantedgefootball@outlook.com">quantedgefootball@outlook.com</a></p>
           <div className="mt-5 flex gap-5 text-cyan-300"><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></div>
         </section>
       </div>

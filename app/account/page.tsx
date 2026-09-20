@@ -22,8 +22,17 @@ export default function AccountPage() {
           <p className="text-sm text-slate-400">Subscription</p>
           <h2 className="mt-2 text-xl font-semibold">Pro access enabled</h2>
           <p className="mt-2 text-sm text-slate-400">Your account is ready to use the live match intelligence dashboard.</p>
-          <Link className="mt-6 inline-block rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/app">Open dashboard</Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link className="inline-block rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/app">Open dashboard</Link>
+            <form action="/api/stripe/portal" method="post">
+              <button className="rounded-lg border border-cyan-400/50 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-400/10" type="submit">
+                Manage or cancel subscription
+              </button>
+            </form>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">Billing changes are securely managed by Stripe. Your available cancellation options are shown in the billing portal.</p>
         </section>
+        <p className="mt-6 text-xs text-slate-500">Customer service: <a className="text-cyan-300 hover:underline" href="mailto:quantedgefootball@outlook.com">quantedgefootball@outlook.com</a></p>
       </div>
     </main>
   )

@@ -23,6 +23,19 @@ export type MatchOdds = {
   markets: Array<{ name: string; label: string; odds: string[] }>
 }
 
+const TRACKED_MARKETS = [
+  { name: "Goals Over/Under", label: "Total goals" },
+  { name: "Both Teams Score", label: "Both teams score" },
+  { name: "Double Chance", label: "Double chance" },
+  { name: "Corners Over/Under", label: "Corners" },
+  { name: "Cards Over/Under", label: "Cards" },
+]
+
+function parseOdd(value?: string) {
+  const parsed = value ? Number.parseFloat(value) : NaN
+  return Number.isFinite(parsed) && parsed > 1 ? parsed : null
+}
+
 export async function fetchMatchOdds(fixtureId: number): Promise<MatchOdds | null> {
   if (!API_KEY) return null
 
@@ -37,27 +50,38 @@ export async function fetchMatchOdds(fixtureId: number): Promise<MatchOdds | nul
     if (!response.ok) return null
 
     const data = await response.json() as OddsResponse
-    const bookmaker = data.response?.[0]?.bookmakers?.[0]
-    const bets = bookmaker?.bets || []
-    const market = bets.find((bet) => bet.name === "Match Winner")
-    const values = market?.values || []
-    const getOdd = (name: string) => {
-      const odd = values.find((entry) => entry.value === name)?.odd
-      const parsed = odd ? Number.parseFloat(odd) : NaN
-      return Number.isFinite(parsed) && parsed > 1 ? parsed : null
+    const bookmakers = data.response?.[0]?.bookmakers || []
+    const allBets = bookmakers.flatMap((bookmaker) => bookmaker.bets || [])
+
+    // Best (highest) price per selection across every bookmaker, so the analysis reflects the best odds available rather than a single provider.
+    function bestOddsForMarket(marketName: string) {
+      const best = new Map<string, number>()
+      for (const bet of allBets) {
+        if (bet.name !== marketName) continue
+        for (const entry of bet.values || []) {
+          const label = entry.value?.trim()
+          const odd = parseOdd(entry.odd)
+          if (!label || odd === null) continue
+          const current = best.get(label)
+          if (current === undefined || odd > current) best.set(label, odd)
+        }
+      }
+      return best
     }
 
-    const additionalMarkets = [
-      { name: "Goals Over/Under", label: "Total goals" },
-      { name: "Corners Over/Under", label: "Corners" },
-      { name: "Cards Over/Under", label: "Cards" },
-      { name: "Both Teams Score", label: "Both teams score" },
-    ]
-    const markets = additionalMarkets.flatMap(({ name, label }) => {
-      const values = bets.find((bet) => bet.name === name)?.values || []
-      return values.length ? [{ name, label, odds: values.map((entry) => `${entry.value || ""} ${entry.odd || ""}`.trim()) }] : []
+    const matchWinner = bestOddsForMarket("Match Winner")
+    const homeOdd = matchWinner.get("Home") ?? null
+    const drawOdd = matchWinner.get("Draw") ?? null
+    const awayOdd = matchWinner.get("Away") ?? null
+
+    const markets = TRACKED_MARKETS.flatMap(({ name, label }) => {
+      const best = bestOddsForMarket(name)
+      if (best.size === 0) return []
+      const odds = Array.from(best.entries()).map(([value, odd]) => `${value} ${odd.toFixed(2)}`)
+      return [{ name, label, odds }]
     })
-    const odds = { home: getOdd("Home"), draw: getOdd("Draw"), away: getOdd("Away"), markets }
+
+    const odds = { home: homeOdd, draw: drawOdd, away: awayOdd, markets }
     return odds.home || odds.draw || odds.away || markets.length ? odds : null
   } catch (error) {
     console.error("MATCH ODDS ERROR", { fixtureId, error })

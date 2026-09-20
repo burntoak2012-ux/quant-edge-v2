@@ -31,6 +31,18 @@ function formatSeason(season: number) {
   return `${season}/${String((season + 1) % 100).padStart(2, "0")}`
 }
 
+function buildPlayerInsight(playerName: string, quantRating: number, goalsPer90: string | number, assistsPer90: string | number, startRate: string | number) {
+  const ratingMood = quantRating >= 85 ? "is operating at an elite level" : quantRating >= 75 ? "is providing strong match-to-match value" : quantRating >= 65 ? "is a useful contributor with room to grow" : "remains a volatile profile that needs context"
+
+  const parts = [
+    `${playerName} ${ratingMood}.`,
+    `The current profile is producing ${goalsPer90} goals per 90 and ${assistsPer90} assists per 90.`,
+    `The available minutes suggest a ${startRate} start rate, which matters when assessing consistency and role security.`,
+  ]
+
+  return parts.join(" ")
+}
+
 function normalizedAppearances(minutes?: number, appearances?: number) {
   if (typeof appearances === "number" && appearances > 0) return appearances
   if (typeof minutes === "number" && minutes > 0) return Math.ceil(minutes / 90)
@@ -141,6 +153,7 @@ export default async function PlayerPage({
   const goalsPer90 = playerMinutes ? ((playerGoals * 90) / playerMinutes).toFixed(2) : "-"
   const assistsPer90 = playerMinutes ? ((playerAssists * 90) / playerMinutes).toFixed(2) : "-"
   const startRate = playerAppearances ? `${Math.round(((stats?.games?.lineups || 0) / playerAppearances) * 100)}%` : "-"
+  const playerInsight = buildPlayerInsight(player.name, quantRating, goalsPer90, assistsPer90, startRate)
 
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
@@ -152,8 +165,18 @@ export default async function PlayerPage({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Player profile</p>
             <h1 className="mt-2 text-4xl font-bold">{player.name}</h1>
             <p className="mt-2 text-slate-400">{player.nationality || "Nationality unavailable"}{player.age ? ` • Age ${player.age}` : ""}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">{stats?.games?.position || "Position unavailable"}</span>
+              <span className="rounded-full border border-lime-400/30 bg-lime-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">{stats?.team?.name || "Team unavailable"}</span>
+              <span className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">{dataSeason} baseline</span>
+            </div>
           </div>
         </header>
+
+        <section className="mt-8 rounded-3xl border border-cyan-400/20 bg-slate-950/60 p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">Player insight</p>
+          <p className="mt-3 text-lg leading-8 text-slate-200">{playerInsight}</p>
+        </section>
 
         <section className="mt-8 border-t border-slate-800 pt-6">
           <div className="flex items-end justify-between gap-4">
@@ -163,7 +186,7 @@ export default async function PlayerPage({
             </div>
             <span className="text-xs text-slate-500">{stats?.league?.name || "Competition"} / {dataSeason} baseline</span>
           </div>
-          <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-5">
+          <div className="rounded-2xl border border-cyan-400/30 bg-slate-900/60 p-5">
             <p className="text-xs uppercase tracking-[0.15em] text-cyan-300">Quant Edge rating</p>
             <div className="mt-2 flex items-end gap-3"><p className="text-5xl font-bold text-white">{quantRating}</p><p className="pb-1 text-sm text-slate-400">/ 99</p></div>
             <p className="mt-2 text-sm text-slate-400">Dynamic estimate using recent performance, minutes, appearances, production, position, and availability.</p>
@@ -179,7 +202,7 @@ export default async function PlayerPage({
               ["Key passes", stats?.passes?.key],
               ["Rating", stats?.games?.rating],
             ].map(([label, value]) => (
-              <div className="qe-panel rounded-2xl border p-4" key={label}>
+              <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4" key={label}>
                 <p className="text-xs uppercase tracking-[0.15em] text-slate-500">{label}</p>
                 <p className="mt-2 text-2xl font-semibold">{display(value)}</p>
               </div>
@@ -191,10 +214,10 @@ export default async function PlayerPage({
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Player snapshot</p>
           <h2 className="mt-2 text-2xl font-bold">Role and contribution</h2>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals / 90</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{goalsPer90}</p><p className="mt-2 text-xs text-slate-400">scoring rate</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Assists / 90</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{assistsPer90}</p><p className="mt-2 text-xs text-slate-400">creative output</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Start rate</p><p className="mt-2 text-2xl font-semibold text-lime-200">{startRate}</p><p className="mt-2 text-xs text-slate-400">of appearances</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Availability</p><p className="mt-2 text-2xl font-semibold text-white">{playerMinutes ? `${playerMinutes}m` : "-"}</p><p className="mt-2 text-xs text-slate-400">across {playerAppearances || "-"} appearances</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals / 90</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{goalsPer90}</p><p className="mt-2 text-xs text-slate-400">scoring rate</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Assists / 90</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{assistsPer90}</p><p className="mt-2 text-xs text-slate-400">creative output</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Start rate</p><p className="mt-2 text-2xl font-semibold text-lime-200">{startRate}</p><p className="mt-2 text-xs text-slate-400">of appearances</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Availability</p><p className="mt-2 text-2xl font-semibold text-white">{playerMinutes ? `${playerMinutes}m` : "-"}</p><p className="mt-2 text-xs text-slate-400">across {playerAppearances || "-"} appearances</p></div>
           </div>
         </section>
 

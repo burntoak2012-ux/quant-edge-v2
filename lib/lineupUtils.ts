@@ -1,7 +1,7 @@
 import { getPlayerRating } from "./playerRatings"
 
 export type LineupPlayer = {
-  player?: { name?: string; position?: string; pos?: string; photo?: string; grid?: string }
+  player?: { name?: string; position?: string; pos?: string; photo?: string; grid?: string; number?: number }
   name?: string
   position?: string
   starts?: boolean
@@ -12,6 +12,7 @@ export type ApiLineup = {
   team?: { name?: string }
   formation?: string
   startXI?: LineupPlayer[]
+  isProjected?: boolean
 }
 
 export async function computeTeamTotals(players: LineupPlayer[]) {

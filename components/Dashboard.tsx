@@ -3,10 +3,12 @@
 import { useUser, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { FiCreditCard } from "react-icons/fi"
 import SignalCard from "@/components/SignalCard"
 import { LEAGUES } from "@/lib/leagues"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
 import BrandMark from "@/components/BrandMark"
+import { SavedBriefsPanel } from "@/components/SavedBriefs"
 
 type Match = {
   accessLevel: "free" | "pro"
@@ -41,20 +43,47 @@ type Match = {
   awayRating: number
   homeProjectedRating: number | null
   awayProjectedRating: number | null
-  projectedLineups: Array<{ team: string; rating: number; formation: string | null; players: Array<{ name: string; photo: string | null; position: string; grid: string | null; rating: number | null }> }> | null
+  projectedLineups: Array<{ team: string; rating: number; formation: string | null; isProjected: boolean; players: Array<{ name: string; photo: string | null; position: string; grid: string | null; number: number | null; rating: number | null }> }> | null
+  lineupStatus: "confirmed" | "projected" | "unavailable"
   hasLineups: boolean
   combinedLineupTotals?: { combinedTotal: number } | null
+  outcomeValues: Array<{ outcome: string; modelProbability: number; impliedProbability: number | null; odd: number | null; value: number | null }>
+  bestValueMarket: { market: string; outcome: string; odd: number | null; valuePercent: number } | null
 }
+
+type WatchItem = {
+  id: number
+  name: string
+}
+
+const WATCHLIST_STORAGE_KEY = "qe-watchlist-v1"
 
 export default function Dashboard() {
   const { user } = useUser()
   const { t } = useLanguage()
   const [matches, setMatches] = useState<Match[]>([])
+  const [watchlist, setWatchlist] = useState<WatchItem[]>(() => {
+    if (typeof window === "undefined") return []
+
+    try {
+      const saved = window.localStorage.getItem(WATCHLIST_STORAGE_KEY)
+      if (!saved) return []
+      const parsed = JSON.parse(saved) as WatchItem[]
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  })
   const [updatedAt, setUpdatedAt] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist))
+  }, [watchlist])
 
   async function loadMatches() {
     setLoading(true)
@@ -109,6 +138,21 @@ export default function Dashboard() {
     : matches
   const isFreePreview = matches[0]?.accessLevel === "free"
 
+  const watchedTeamIds = new Set(watchlist.map((item) => item.id))
+  const trackedFixtures = matches.filter((match) =>
+    watchedTeamIds.has(match.homeTeamId) || watchedTeamIds.has(match.awayTeamId)
+  )
+
+  function toggleWatchlist(teamId: number, teamName: string) {
+    setWatchlist((current) => {
+      const exists = current.some((item) => item.id === teamId)
+      if (exists) {
+        return current.filter((item) => item.id !== teamId)
+      }
+      return [{ id: teamId, name: teamName }, ...current].slice(0, 12)
+    })
+  }
+
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
       <div className="mx-auto max-w-6xl">
@@ -127,24 +171,30 @@ export default function Dashboard() {
               <Link className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-cyan-400 hover:text-white" href="/account">
                 Account
               </Link>
-              <Link className="rounded-lg border border-lime-300/40 px-3 py-2 text-sm text-lime-200 hover:bg-lime-300/10" href="/performance">
-                Performance
-              </Link>
+              <form action="/api/stripe/portal" method="post">
+                <button className="rounded-lg border border-lime-300/50 px-3 py-2 text-sm font-semibold text-lime-200 hover:bg-lime-300/10" type="submit">
+                  Manage subscription
+                </button>
+              </form>
               <LanguageSelector />
-              <UserButton />
+              <UserButton>
+                <UserButton.MenuItems>
+                  <UserButton.Link label="Manage subscription" href="/account" labelIcon={<FiCreditCard />} />
+                </UserButton.MenuItems>
+              </UserButton>
             </div>
           </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="qe-panel rounded-2xl border p-3">
+            <div className="qe-panel rounded-2xl border border-cyan-400/20 bg-slate-900/60 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Signal</p>
               <p className="mt-2 text-xl font-semibold text-cyan-300">Live</p>
             </div>
-            <div className="qe-panel rounded-2xl border p-3">
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t.focus}</p>
               <p className="mt-2 text-xl font-semibold text-white">{visibleMatches.length || 0} {t.fixtures}</p>
             </div>
-            <div className="qe-panel rounded-2xl border p-3">
+            <div className="qe-panel rounded-2xl border border-lime-400/20 bg-slate-900/60 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Welcome</p>
               <p className="mt-2 text-sm font-medium text-white">{user?.firstName || "Analyst"}</p>
             </div>
@@ -181,7 +231,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {LEAGUES.map((league) => (
-              <Link className="qe-panel rounded-2xl border p-4" href={`/leagues/${league.id}`} key={league.id}>
+              <Link className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4 transition-colors hover:border-cyan-400/50" href={`/leagues/${league.id}`} key={league.id}>
                 <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{league.country}</p>
                 <p className="mt-2 font-semibold text-white">{league.name}</p>
                 <p className="mt-2 text-xs text-cyan-300">Standings &amp; fixtures &rarr;</p>
@@ -210,13 +260,72 @@ export default function Dashboard() {
           <p className="mt-1">{t.decisionSupportCopy}</p>
         </aside>
 
-        {isFreePreview && <aside className="mb-8 border border-cyan-300/30 bg-cyan-300/10 p-5 text-sm text-slate-200"><p className="font-semibold text-cyan-100">Free preview</p><p className="mt-1">You can explore two fixtures and core model context. Upgrade to Pro for full daily coverage, live statistics, team and player research, projected XIs, odds context, and performance tracking.</p><Link className="mt-4 inline-block rounded-full bg-lime-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">Unlock Pro</Link></aside>}
+        {isFreePreview && <aside className="mb-8 border border-cyan-300/30 bg-cyan-300/10 p-5 text-sm text-slate-200"><p className="font-semibold text-cyan-100">Free preview</p><p className="mt-1">You can explore two fixtures and core model context. Upgrade to Pro for full daily coverage, live statistics, team and player research, projected XIs, and odds context.</p><Link className="mt-4 inline-block rounded-full bg-lime-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">Unlock Pro</Link></aside>}
+
+        <SavedBriefsPanel />
+
+        <section className="mb-8 rounded-3xl border border-cyan-400/20 bg-slate-950/60 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">Watchlist</p>
+              <h2 className="mt-2 text-2xl font-bold">Tracked teams</h2>
+            </div>
+            <span className="rounded-full border border-lime-300/40 bg-lime-300/10 px-3 py-1 text-xs font-semibold text-lime-200">
+              {watchlist.length} followed
+            </span>
+          </div>
+
+          {watchlist.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-400">Follow a team from the match cards to keep it in your watchlist and get a quick alert feed.</p>
+          ) : (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {watchlist.map((item) => (
+                <button
+                  className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1.5 text-sm text-cyan-100 hover:border-cyan-300"
+                  key={item.id}
+                  onClick={() => toggleWatchlist(item.id, item.name)}
+                  type="button"
+                >
+                  {item.name} ×
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Alert feed</p>
+            {trackedFixtures.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-400">No watched teams are in the current fixture list yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-2 text-sm text-slate-200">
+                {trackedFixtures.slice(0, 3).map((match) => {
+                  const trackedClub = watchlist.find((item) => item.id === match.homeTeamId || item.id === match.awayTeamId)
+                  const teamName = trackedClub?.name || "Tracked club"
+                  return (
+                    <li className="rounded-xl border border-lime-300/20 bg-lime-300/5 px-3 py-2" key={match.fixtureId}>
+                      {teamName} is in focus: {match.homeTeam} vs {match.awayTeam} ({match.confidence}% confidence)
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
 
         {loading && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-slate-300">{t.loadingFixtures}</div>}
         {!loading && error && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-8 text-amber-100"><p className="font-semibold">Match access unavailable</p><p className="mt-2 text-sm text-amber-200/80">{error}</p><div className="mt-5 flex flex-wrap gap-3"><Link className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" href="/pricing">View plans</Link><button className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm" onClick={loadMatches}>Try again</button></div></div>}
         {!loading && !error && matches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">{t.noFixtures}</p><p className="mt-2 text-sm text-slate-400">{t.checkBack}</p></div>}
         {!loading && !error && matches.length > 0 && visibleMatches.length === 0 && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8"><p className="font-semibold">{t.noMatching}</p><p className="mt-2 text-sm text-slate-400">{t.tryDifferent}</p></div>}
-        {!loading && !error && visibleMatches.length > 0 && <div className="grid gap-5">{visibleMatches.map((match) => <SignalCard key={match.fixtureId} {...match} combinedLineupTotal={match.combinedLineupTotals?.combinedTotal} />)}</div>}
+        {!loading && !error && visibleMatches.length > 0 && <div className="grid gap-5">{visibleMatches.map((match) => (
+          <SignalCard
+            {...match}
+            combinedLineupTotal={match.combinedLineupTotals?.combinedTotal}
+            isWatchedHome={watchedTeamIds.has(match.homeTeamId)}
+            isWatchedAway={watchedTeamIds.has(match.awayTeamId)}
+            key={match.fixtureId}
+            onToggleWatchlist={toggleWatchlist}
+          />
+        ))}</div>}
       </div>
     </main>
   )

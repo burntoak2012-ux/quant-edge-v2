@@ -133,6 +133,9 @@ export default async function TeamPage({
     ...group,
     players: players.filter((entry) => entry.statistics?.[0]?.games?.position?.includes(group.key)),
   }))
+  const winRate = played && typeof wins === "number" ? `${Math.round((wins / played) * 100)}%` : "-"
+  const goalDifference = typeof goalsFor === "number" && typeof goalsAgainst === "number" ? goalsFor - goalsAgainst : "-"
+  const formResults = formSummary.results.length ? formSummary.results.join(" ") : "-"
 
   return (
     <main className="qe-grid min-h-screen px-5 py-8 text-white sm:px-10">
@@ -152,13 +155,19 @@ export default async function TeamPage({
             <div className="border-l-2 border-cyan-300 pl-3"><p className="text-xs text-slate-500">Home venue</p><p className="mt-1 font-semibold">{team.venue?.name || "Unavailable"}</p></div>
             <div className="border-l-2 border-cyan-300 pl-3"><p className="text-xs text-slate-500">Venue city</p><p className="mt-1 font-semibold">{team.venue?.city || "Unavailable"}</p></div>
           </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Win rate {winRate}</span>
+            <span className="rounded-full border border-lime-400/30 bg-lime-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">GD {goalDifference}</span>
+            <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200">Form {formResults}</span>
+            <span className="rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Squad {players.length}</span>
+          </div>
         </header>
 
         <section className="mt-6 border-t border-slate-800 pt-6">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Season snapshot</p>
-              <h2 className="mt-2 text-2xl font-bold">Recent competition stats</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Profile summary</p>
+              <h2 className="mt-2 text-2xl font-bold">Recent competition shape</h2>
             </div>
             <span className="text-xs text-slate-500">{statsResult?.season || season} baseline</span>
           </div>
@@ -173,7 +182,7 @@ export default async function TeamPage({
                 ["Goals against", goalsAgainst],
                 ["Form", stats.form || "-"],
               ].map(([label, value]) => (
-                <div className="qe-panel rounded-2xl border p-4" key={label}>
+                <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4" key={label}>
                   <p className="text-xs uppercase tracking-[0.15em] text-slate-500">{label}</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{value ?? "-"}</p>
                 </div>
@@ -188,10 +197,10 @@ export default async function TeamPage({
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Analyst snapshot</p>
           <h2 className="mt-2 text-2xl font-bold">What the numbers suggest</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Last five</p><p className="mt-2 text-2xl font-semibold tracking-[0.18em] text-white">{formSummary.results.join(" ") || "-"}</p><p className="mt-2 text-xs text-slate-400">{formSummary.points} points from the latest five</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Unbeaten run</p><p className="mt-2 text-2xl font-semibold text-white">{formSummary.unbeaten || "-"}</p><p className="mt-2 text-xs text-slate-400">consecutive matches</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals per game</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{goalsPerGame}</p><p className="mt-2 text-xs text-slate-400">{concededPerGame} conceded per game</p></div>
-            <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Clean sheets</p><p className="mt-2 text-2xl font-semibold text-lime-200">{cleanSheetRate}</p><p className="mt-2 text-xs text-slate-400">of completed matches</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Last five</p><p className="mt-2 text-2xl font-semibold tracking-[0.18em] text-white">{formSummary.results.join(" ") || "-"}</p><p className="mt-2 text-xs text-slate-400">{formSummary.points} points from the latest five</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Unbeaten run</p><p className="mt-2 text-2xl font-semibold text-white">{formSummary.unbeaten || "-"}</p><p className="mt-2 text-xs text-slate-400">consecutive matches</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals per game</p><p className="mt-2 text-2xl font-semibold text-cyan-200">{goalsPerGame}</p><p className="mt-2 text-xs text-slate-400">{concededPerGame} conceded per game</p></div>
+            <div className="qe-panel rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Clean sheets</p><p className="mt-2 text-2xl font-semibold text-lime-200">{cleanSheetRate}</p><p className="mt-2 text-xs text-slate-400">of completed matches</p></div>
           </div>
         </section>
 

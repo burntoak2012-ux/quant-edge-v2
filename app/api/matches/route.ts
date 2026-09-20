@@ -138,9 +138,16 @@ console.log("API ERRORS:", data.errors)
         fetchTeamRating(item.teams.away.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
       ])
     )
-    const projectedLineupEntries = access.isPro
-      ? await Promise.all(selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(item.fixture.id)))
-      : selectedFixtures.map(() => null)
+    const projectedLineupEntries = await Promise.all(
+      selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(
+        item.fixture.id,
+        item.teams.home.name,
+        item.teams.away.name,
+        item.teams.home.id,
+        item.teams.away.id,
+        item.league.season || new Date().getUTCFullYear(),
+      ))
+    )
     const oddsEntries = access.isPro
       ? await Promise.all(selectedFixtures.map((item: Fixture) => fetchMatchOdds(item.fixture.id)))
       : selectedFixtures.map(() => null)
@@ -151,6 +158,9 @@ console.log("API ERRORS:", data.errors)
         const homeRating = ratingEntries[index * 2] || teamRatings[item.teams.home.name] || 70
         const awayRating = ratingEntries[index * 2 + 1] || teamRatings[item.teams.away.name] || 70
         const projectedLineups = projectedLineupEntries[index]
+        const lineupStatus = projectedLineups?.length
+          ? projectedLineups.every((lineup: { isProjected: boolean }) => lineup.isProjected) ? "projected" : "confirmed"
+          : "unavailable"
         const homeProjectedRating = findProjectedRating(projectedLineups, item.teams.home.name)
         const awayProjectedRating = findProjectedRating(projectedLineups, item.teams.away.name)
         const matchOdds = oddsEntries[index]
@@ -168,6 +178,25 @@ console.log("API ERRORS:", data.errors)
         const impliedProbability = selectedOdds ? 1 / selectedOdds : null
         const valuePercent = impliedProbability
           ? Math.round((probabilities.confidence / 100 - impliedProbability) * 100)
+          : null
+
+        // Compare the model's full probability spread against the best odds for every 1X2 outcome, not just the predicted one.
+        const outcomeValues = (
+          [
+            ["HOME WIN", probabilities.home, matchOdds?.home] as const,
+            ["DRAW", probabilities.draw, matchOdds?.draw] as const,
+            ["AWAY WIN", probabilities.away, matchOdds?.away] as const,
+          ]
+        ).map(([outcome, modelProbability, odd]) => {
+          const implied = odd ? Math.round((1 / odd) * 100) : null
+          const value = odd ? Math.round(modelProbability - implied!) : null
+          return { outcome, modelProbability, impliedProbability: implied, odd: odd ?? null, value }
+        })
+        const bestValueEntry = outcomeValues
+          .filter((entry) => entry.value !== null)
+          .sort((left, right) => (right.value ?? -Infinity) - (left.value ?? -Infinity))[0] || null
+        const bestValueMarket = bestValueEntry && bestValueEntry.value !== null && bestValueEntry.value >= 5
+          ? { market: "Match Winner", outcome: bestValueEntry.outcome, odd: bestValueEntry.odd, valuePercent: bestValueEntry.value }
           : null
 
         return {
@@ -205,12 +234,15 @@ console.log("API ERRORS:", data.errors)
               : valuePercent <= -5
                 ? "Potentially overpriced"
                 : "Fairly priced",
+          outcomeValues,
+          bestValueMarket,
           homeRating,
           awayRating,
           homeProjectedRating,
           awayProjectedRating,
           projectedLineups,
-          hasLineups: false,
+          lineupStatus,
+          hasLineups: Boolean(projectedLineups?.length),
           combinedLineupTotals: null,
         }
       })
@@ -272,18 +304,20 @@ console.log("API ERRORS:", data.errors)
   }
 }
 
-async function fetchProjectedLineupRatings(fixtureId: number) {
+async function fetchProjectedLineupRatings(fixtureId: number, homeName?: string, awayName?: string, homeTeamId?: number, awayTeamId?: number, season?: number) {
   try {
-    const lineups = await fetchLineups(fixtureId)
+    const lineups = await fetchLineups(fixtureId, { home: homeName, away: awayName, homeTeamId, awayTeamId, season })
     const ratings = (lineups as ApiLineup[]).map((lineup) => ({
       team: lineup.team?.name || "Team",
       rating: calculateLineupRating(lineup.startXI || []).average,
       formation: lineup.formation || null,
+      isProjected: Boolean(lineup.isProjected),
       players: (lineup.startXI || []).map((player) => ({
         name: player.player?.name || player.name || "Unknown player",
         photo: player.player?.photo || null,
         position: player.position || player.player?.pos || player.player?.position || "MID",
         grid: player.player?.grid || null,
+        number: player.player?.number ?? null,
         rating: calculateLineupRating([player]).players[0]?.rating || null,
       })),
     }))
