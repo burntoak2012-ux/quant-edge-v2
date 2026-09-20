@@ -1,6 +1,5 @@
 const API_KEY = process.env.API_FOOTBALL_KEY
 
-import { fetchFlashscoreLineups } from "./fetchFlashscore"
 import type { ApiLineup } from "./lineupUtils"
 
 type SquadListResponse = {
@@ -104,22 +103,26 @@ async function fetchSquadRoster(teamId: number): Promise<RosterPlayer[] | null> 
 
 async function fetchAppearanceWeights(teamId: number, season: number) {
   const weights = new Map<string, { lineups: number; minutes: number }>()
-  try {
-    const response = await fetch(`https://v3.football.api-sports.io/players?team=${teamId}&season=${season}`, {
-      headers: { "x-apisports-key": API_KEY || "" },
-      next: { revalidate: 21600 },
-    })
-    if (!response.ok) return weights
+  // Free API plans only serve stats for 2022-2024, so fall back to the most recent allowed season if the current one is rejected.
+  for (const requestedSeason of [season, 2024]) {
+    if (weights.size > 0 || (requestedSeason === 2024 && season === 2024)) continue
+    try {
+      const response = await fetch(`https://v3.football.api-sports.io/players?team=${teamId}&season=${requestedSeason}`, {
+        headers: { "x-apisports-key": API_KEY || "" },
+        next: { revalidate: 21600 },
+      })
+      if (!response.ok) continue
 
-    const data = await response.json() as AppearanceResponse
-    for (const entry of data.response || []) {
-      const name = entry.player?.name
-      const games = entry.statistics?.[0]?.games
-      if (!name || !games) continue
-      weights.set(name.toLowerCase(), { lineups: games.lineups || 0, minutes: games.minutes || 0 })
+      const data = await response.json() as AppearanceResponse
+      for (const entry of data.response || []) {
+        const name = entry.player?.name
+        const games = entry.statistics?.[0]?.games
+        if (!name || !games) continue
+        weights.set(name.toLowerCase(), { lineups: games.lineups || 0, minutes: games.minutes || 0 })
+      }
+    } catch (error) {
+      console.warn("Appearance weights fetch failed", { teamId, requestedSeason, error })
     }
-  } catch (error) {
-    console.warn("Appearance weights fetch failed", { teamId, season, error })
   }
   return weights
 }
@@ -156,12 +159,7 @@ export async function fetchLineups(fixtureId: number, opts?: { home?: string; aw
 
     if (hasStartingPlayers) return resp
 
-    if (opts?.home && opts?.away) {
-      console.log("No lineups from API, trying Flashscore fallback")
-      const fs = await fetchFlashscoreLineups(opts.home, opts.away)
-      if (fs && fs.length > 0) return fs.map((lineup) => ({ ...lineup, isProjected: true })) as ApiLineup[]
-    }
-
+    // Flashscore slug-guessing was too slow/unreliable in production and risked serverless timeouts; go straight to the squad-based projection.
     if (opts?.homeTeamId && opts.awayTeamId && opts.home && opts.away) {
       console.log("No confirmed lineups, building squad-based projected XIs")
       const [homeProjection, awayProjection] = await Promise.all([

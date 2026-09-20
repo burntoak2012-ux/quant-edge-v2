@@ -2,7 +2,21 @@ import { UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import BrandMark from "@/components/BrandMark"
 
-export default function AccountPage() {
+const BILLING_ERROR_MESSAGES: Record<string, string> = {
+  unavailable: "Billing is not configured yet. Contact support and we'll help directly.",
+  lookup: "We couldn't check your subscription right now. Please try again in a moment.",
+  no_customer: "We couldn't find an active Stripe subscription on this account. Contact support if you believe this is a mistake.",
+  portal: "We couldn't open the billing portal. Please try again, or contact support.",
+}
+
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing_error?: string }>
+}) {
+  const { billing_error: billingError } = await searchParams
+  const billingErrorMessage = billingError ? BILLING_ERROR_MESSAGES[billingError] : null
+
   return (
     <main className="qe-grid min-h-screen p-6 text-white sm:p-10">
       <div className="mx-auto max-w-2xl">
@@ -18,6 +32,11 @@ export default function AccountPage() {
             <UserButton />
           </div>
         </div>
+        {billingErrorMessage && (
+          <div className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">
+            {billingErrorMessage}
+          </div>
+        )}
         <section className="qe-panel mt-10 rounded-3xl border p-6">
           <p className="text-sm text-slate-400">Subscription</p>
           <h2 className="mt-2 text-xl font-semibold">Pro access enabled</h2>

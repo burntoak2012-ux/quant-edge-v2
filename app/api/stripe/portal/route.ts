@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   }
 
   if (!stripe || !supabase) {
-    return NextResponse.json({ error: "Billing is not configured" }, { status: 503 })
+    return NextResponse.redirect(new URL("/account?billing_error=unavailable", req.url), { status: 303 })
   }
 
   const { data: customer, error } = await supabase
@@ -29,11 +29,11 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error("Stripe portal customer lookup failed:", error)
-    return NextResponse.json({ error: "Subscription service unavailable" }, { status: 503 })
+    return NextResponse.redirect(new URL("/account?billing_error=lookup", req.url), { status: 303 })
   }
 
   if (!customer?.stripe_customer_id) {
-    return NextResponse.redirect(new URL("/pricing", req.url), { status: 303 })
+    return NextResponse.redirect(new URL("/account?billing_error=no_customer", req.url), { status: 303 })
   }
 
   try {
@@ -46,6 +46,6 @@ export async function POST(req: Request) {
     return NextResponse.redirect(session.url, { status: 303 })
   } catch (error) {
     console.error("Stripe portal session creation failed:", error)
-    return NextResponse.json({ error: "Unable to open billing portal" }, { status: 500 })
+    return NextResponse.redirect(new URL("/account?billing_error=portal", req.url), { status: 303 })
   }
 }
