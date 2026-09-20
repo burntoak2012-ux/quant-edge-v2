@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { supabase } from "@/lib/supabaseClient"
+import { logEvent } from "@/lib/analytics"
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-05-27.dahlia" })
@@ -53,6 +54,8 @@ export async function POST(req: Request) {
           : await supabase.from("customers").insert(customerRecord)
         if (customerResult.error) throw customerResult.error
 
+        await logEvent("checkout_completed", userId, { checkout_session_id: session.id })
+
         break
       }
 
@@ -82,6 +85,13 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         })
         if (result.error) throw result.error
+
+        if (sub.status === "active") {
+          await logEvent("subscription_active", userId, { subscription_id: sub.id })
+        } else if (sub.status === "canceled") {
+          await logEvent("subscription_canceled", userId, { subscription_id: sub.id })
+        }
+
         break
       }
       default:

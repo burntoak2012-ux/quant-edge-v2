@@ -1,15 +1,21 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { SignInButton } from "@clerk/nextjs"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
 import BrandMark from "@/components/BrandMark"
+import { trackEvent } from "@/lib/analyticsClient"
 
 export default function PricingPage() {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    trackEvent("pricing_view")
+  }, [])
+
   async function subscribe() {
     setLoading(true)
+    trackEvent("checkout_start")
 
     try {
       const res = await fetch("/api/stripe/create-session", {

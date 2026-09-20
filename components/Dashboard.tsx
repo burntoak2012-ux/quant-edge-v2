@@ -2,13 +2,14 @@
 
 import { useUser, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { FiCreditCard } from "react-icons/fi"
 import { LEAGUES } from "@/lib/leagues"
 import { getLeagueImportance } from "@/lib/leagueImportance"
 import { LanguageSelector, useLanguage } from "@/components/LanguageProvider"
 import BrandMark from "@/components/BrandMark"
 import { SavedBriefsPanel } from "@/components/SavedBriefs"
+import { trackEvent } from "@/lib/analyticsClient"
 
 type Match = {
   accessLevel: "free" | "pro"
@@ -81,6 +82,7 @@ export default function Dashboard() {
   const [error, setError] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const hasTrackedFreePreview = useRef(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -104,6 +106,10 @@ export default function Dashboard() {
 
       setMatches(data)
       setUpdatedAt(new Date().toLocaleTimeString())
+      if (!hasTrackedFreePreview.current && data[0]?.accessLevel === "free") {
+        hasTrackedFreePreview.current = true
+        trackEvent("free_preview_view")
+      }
     } catch (loadError) {
       console.error("Failed to load matches:", loadError)
       setError(loadError instanceof Error ? loadError.message : "Unable to load matches")
