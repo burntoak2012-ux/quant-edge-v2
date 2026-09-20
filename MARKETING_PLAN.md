@@ -22,7 +22,7 @@ Before broad promotion, verify:
 - An inactive account is blocked from paid match data.
 - The dashboard fixture feed works for a selected date.
 - Prediction rows appear in `prediction_snapshots`.
-- `/performance` loads without errors.
+- `/internal/performance` loads without errors for admin accounts only.
 - Support contact, refund policy, terms, privacy, and responsible-gambling wording are visible.
 
 If one of these fails, keep the launch as a private beta until it is repaired.
@@ -80,7 +80,7 @@ Prioritize changes that help users answer:
 >
 > Founding beta access is £9.99/month, with a 14-day refund policy. Try it here:
 >
-> https://quant-edge-v2.vercel.app
+> https://quantedgefootball.com
 >
 > I’d value honest feedback on the match analysis, probability split, odds context, projected XI ratings, and whether you would keep using it.
 
