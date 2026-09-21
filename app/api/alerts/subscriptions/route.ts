@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   }, { onConflict: "user_id,fixture_id" })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  await logEvent("lineup_alert_subscribed", identity.userId, { fixture_id: fixtureId })
+  void logEvent("lineup_alert_subscribed", identity.userId, { fixture_id: fixtureId })
   return NextResponse.json({ subscribed: true })
 }
 

@@ -37,19 +37,29 @@ export function LineupAlertButton({ fixtureId, homeTeam, awayTeam, kickoff, line
   async function toggleAlert() {
     setStatus("saving")
     setMessage("")
-    const response = await fetch(`/api/alerts/subscriptions${subscribed ? `?fixtureId=${fixtureId}` : ""}`, {
-      method: subscribed ? "DELETE" : "POST",
-      headers: subscribed ? undefined : { "Content-Type": "application/json" },
-      body: subscribed ? undefined : JSON.stringify({ fixtureId, homeTeam, awayTeam, kickoff }),
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setMessage(data.error || "Unable to update alert")
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 10000)
+    try {
+      const response = await fetch(`/api/alerts/subscriptions${subscribed ? `?fixtureId=${fixtureId}` : ""}`, {
+        method: subscribed ? "DELETE" : "POST",
+        headers: subscribed ? undefined : { "Content-Type": "application/json" },
+        body: subscribed ? undefined : JSON.stringify({ fixtureId, homeTeam, awayTeam, kickoff }),
+        signal: controller.signal,
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setMessage(data.error || "Unable to update alert")
+        setStatus("error")
+        return
+      }
+      setSubscribed(Boolean(data.subscribed))
+      setStatus("idle")
+    } catch (error) {
+      setMessage(error instanceof DOMException && error.name === "AbortError" ? "The alert request timed out. Please try again." : "Unable to update alert. Please try again.")
       setStatus("error")
-      return
+    } finally {
+      window.clearTimeout(timeout)
     }
-    setSubscribed(Boolean(data.subscribed))
-    setStatus("idle")
   }
 
   if (lineupsConfirmed) {
