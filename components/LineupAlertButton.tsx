@@ -19,7 +19,16 @@ export function LineupAlertButton({ fixtureId, homeTeam, awayTeam, kickoff, line
   useEffect(() => {
     let active = true
     fetch(`/api/alerts/subscriptions?fixtureId=${fixtureId}`, { cache: "no-store" })
-      .then(async (response) => ({ response, data: await response.json() }))
+      .then(async (response) => {
+        const responseText = await response.text()
+        let data: { error?: string; subscribed?: boolean } = {}
+        try {
+          data = JSON.parse(responseText) as typeof data
+        } catch {
+          data = { error: responseText || `Request failed (${response.status})` }
+        }
+        return { response, data }
+      })
       .then(({ response, data }) => {
         if (!active) return
         if (!response.ok) throw new Error(data.error || "Alert status unavailable")
