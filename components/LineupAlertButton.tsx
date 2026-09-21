@@ -46,9 +46,15 @@ export function LineupAlertButton({ fixtureId, homeTeam, awayTeam, kickoff, line
         body: subscribed ? undefined : JSON.stringify({ fixtureId, homeTeam, awayTeam, kickoff }),
         signal: controller.signal,
       })
-      const data = await response.json()
+      const responseText = await response.text()
+      let data: { error?: string; subscribed?: boolean } = {}
+      try {
+        data = JSON.parse(responseText) as typeof data
+      } catch {
+        data = { error: responseText || `Request failed (${response.status})` }
+      }
       if (!response.ok) {
-        setMessage(data.error || "Unable to update alert")
+        setMessage(data.error || `Unable to update alert (${response.status})`)
         setStatus("error")
         return
       }

@@ -40,31 +40,36 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const identity = await authenticatedUser()
-  if (!identity) return NextResponse.json({ error: "Authentication and an email address are required" }, { status: 401 })
-  if (!supabase || !lineupEmailConfigured()) return NextResponse.json({ error: "Email alerts are not configured" }, { status: 503 })
+  try {
+    const identity = await authenticatedUser()
+    if (!identity) return NextResponse.json({ error: "Authentication and an email address are required" }, { status: 401 })
+    if (!supabase || !lineupEmailConfigured()) return NextResponse.json({ error: "Email alerts are not configured" }, { status: 503 })
 
-  const body = await request.json() as SubscriptionRequest
-  const fixtureId = Number(body.fixtureId)
-  const kickoff = body.kickoff ? new Date(body.kickoff) : null
-  if (!Number.isInteger(fixtureId) || !body.homeTeam || !body.awayTeam || !kickoff || Number.isNaN(kickoff.getTime())) {
-    return NextResponse.json({ error: "Invalid fixture details" }, { status: 400 })
+    const body = await request.json() as SubscriptionRequest
+    const fixtureId = Number(body.fixtureId)
+    const kickoff = body.kickoff ? new Date(body.kickoff) : null
+    if (!Number.isInteger(fixtureId) || !body.homeTeam || !body.awayTeam || !kickoff || Number.isNaN(kickoff.getTime())) {
+      return NextResponse.json({ error: "Invalid fixture details" }, { status: 400 })
+    }
+
+    const { error } = await supabase.from("lineup_alerts").upsert({
+      user_id: identity.userId,
+      email: identity.email,
+      fixture_id: fixtureId,
+      home_team: body.homeTeam.slice(0, 120),
+      away_team: body.awayTeam.slice(0, 120),
+      kickoff: kickoff.toISOString(),
+      status: "pending",
+      sent_at: null,
+    }, { onConflict: "user_id,fixture_id" })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    void logEvent("lineup_alert_subscribed", identity.userId, { fixture_id: fixtureId })
+    return NextResponse.json({ subscribed: true })
+  } catch (error) {
+    console.error("LINEUP ALERT SUBSCRIPTION ERROR", error)
+    return NextResponse.json({ error: "Unable to save lineup alert on the server" }, { status: 500 })
   }
-
-  const { error } = await supabase.from("lineup_alerts").upsert({
-    user_id: identity.userId,
-    email: identity.email,
-    fixture_id: fixtureId,
-    home_team: body.homeTeam.slice(0, 120),
-    away_team: body.awayTeam.slice(0, 120),
-    kickoff: kickoff.toISOString(),
-    status: "pending",
-    sent_at: null,
-  }, { onConflict: "user_id,fixture_id" })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  void logEvent("lineup_alert_subscribed", identity.userId, { fixture_id: fixtureId })
-  return NextResponse.json({ subscribed: true })
 }
 
 export async function DELETE(request: Request) {
