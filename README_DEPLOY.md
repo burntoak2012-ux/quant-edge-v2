@@ -32,15 +32,23 @@ Getting this SaaS live — quick deploy checklist
 - Create a Clerk app and add the allowed origin(s) including the dev URL (http://localhost:3000) and your production domain.
 - Set Clerk env vars in Vercel.
 
-5) Deploy (Vercel recommended)
+5) Lineup alert scheduler
+
+- Create a free scheduled job at `cron-job.org` (or an equivalent scheduler).
+- Request URL: `https://quantedgefootball.com/api/alerts/check`
+- Schedule: every 5 minutes.
+- Add request header `Authorization: Bearer <your CRON_SECRET>` using the same `CRON_SECRET` value configured in Vercel.
+- Use a GET request. A successful empty check returns JSON with `checked`, `fixtures`, and `sent` counts.
+
+6) Deploy (Vercel recommended)
 
 - Push changes to GitHub, connect repository in Vercel, set the environment variables in the Vercel dashboard, and deploy.
 
-6) Test flow
+7) Test flow
 
 - Sign up via `/sign-up` (Clerk). Visit `/pricing` → Subscribe → complete checkout. Confirm Stripe webhook writes to Supabase, then open `/app`.
 
-7) Notes & next steps
+8) Notes & next steps
 
 - For production reliability add caching for Soccerwiki requests, a job/worker for scraping Flashscore if needed, and monitor Stripe webhook retries.
 - Add legal pages and billing email templates before public launch.
