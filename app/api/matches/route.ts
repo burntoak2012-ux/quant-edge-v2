@@ -6,7 +6,6 @@ import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { fetchLineups } from "@/lib/fetchLineups"
 import { fetchMatchOdds } from "@/lib/fetchMatchOdds"
 import type { ApiLineup } from "@/lib/lineupUtils"
-import { getHistoricalRatingSnapshot } from "@/lib/historicalRatingSnapshots"
 import { getSubscriptionAccess } from "@/lib/requireSubscription"
 import { supabase } from "@/lib/supabaseClient"
 
@@ -210,7 +209,6 @@ console.log("API ERRORS:", data.errors)
         const awayProjectedRating = findProjectedRating(confirmedLineups, item.teams.away.name)
         const homeLineupTotal = confirmedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.home.name)?.total ?? null
         const awayLineupTotal = confirmedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.away.name)?.total ?? null
-        const historicalSnapshot = getHistoricalRatingSnapshot(fixtureId)
         const homeForm = formEntries[index * 2]
         const awayForm = formEntries[index * 2 + 1]
         const ratingPrediction = homeLineupTotal !== null && awayLineupTotal !== null
@@ -302,9 +300,9 @@ console.log("API ERRORS:", data.errors)
           projectedLineups: confirmedLineups,
           lineupStatus,
           hasLineups: Boolean(confirmedLineups?.length),
-          ratingSource: historicalSnapshot?.sourceLabel || null,
-          ratingSourceUrl: historicalSnapshot?.sourceUrl || null,
-          ratingCapturedAt: historicalSnapshot?.capturedAt || null,
+          ratingSource: confirmedLineups?.length ? "Quant Edge model" : null,
+          ratingSourceUrl: null,
+          ratingCapturedAt: null,
           homeForm: homeForm?.sequence || null,
           homeFormPoints: homeForm?.points ?? null,
           awayForm: awayForm?.sequence || null,
@@ -375,9 +373,6 @@ console.log("API ERRORS:", data.errors)
 
 async function fetchConfirmedLineupRatings(fixtureId: number) {
   try {
-    const historicalSnapshot = getHistoricalRatingSnapshot(fixtureId)
-    if (historicalSnapshot) return historicalSnapshot.lineups
-
     const lineups = await fetchLineups(fixtureId)
     const confirmedLineups = lineups.filter((lineup) => !lineup.isProjected && (lineup.startXI?.length || 0) >= 11)
     const ratings = (confirmedLineups as ApiLineup[]).map((lineup) => {
