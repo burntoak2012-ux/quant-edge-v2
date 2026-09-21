@@ -6,6 +6,7 @@ import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { fetchLineups } from "@/lib/fetchLineups"
 import { fetchMatchOdds } from "@/lib/fetchMatchOdds"
 import type { ApiLineup } from "@/lib/lineupUtils"
+import { getHistoricalRatingSnapshot } from "@/lib/historicalRatingSnapshots"
 import { getSubscriptionAccess } from "@/lib/requireSubscription"
 import { supabase } from "@/lib/supabaseClient"
 
@@ -21,6 +22,7 @@ const TARGET_LEAGUE_IDS = new Set([
   61,  // Ligue 1
   2,   // UEFA Champions League
   3,   // UEFA Europa League
+  5,   // UEFA Nations League
   848, // UEFA Europa Conference League
   18,  // AFC Champions League Two
 ])
@@ -41,6 +43,52 @@ type Fixture = {
 
 type TeamStatsResponse = {
   response?: Parameters<typeof calculateTeamRating>[0]
+}
+
+type RecentFixture = {
+  teams?: { home?: { id?: number }; away?: { id?: number } }
+  goals?: { home?: number | null; away?: number | null }
+}
+
+type RecentFixturesResponse = { response?: RecentFixture[] }
+
+function formPoints(results: string) {
+  return results.split("").reduce((total, result) => total + (result === "W" ? 3 : result === "D" ? 1 : 0), 0)
+}
+
+function predictFromGap(homeValue: number, awayValue: number, drawThreshold: number, homeTeam: string, awayTeam: string) {
+  const gap = homeValue - awayValue
+  if (Math.abs(gap) <= drawThreshold) return "DRAW"
+  return gap > 0 ? homeTeam : awayTeam
+}
+
+async function fetchRecentForm(teamId: number) {
+  try {
+    const response = await fetch(
+      `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5&status=FT`,
+      {
+        headers: { "x-apisports-key": API_KEY || "" },
+        next: { revalidate: 3600 },
+      },
+    )
+    if (!response.ok) return null
+
+    const data = await response.json() as RecentFixturesResponse
+    const results = (data.response || []).flatMap((fixture) => {
+      const homeGoals = fixture.goals?.home
+      const awayGoals = fixture.goals?.away
+      if (homeGoals === null || homeGoals === undefined || awayGoals === null || awayGoals === undefined) return []
+      if (homeGoals === awayGoals) return ["D"]
+      const isHome = fixture.teams?.home?.id === teamId
+      const won = isHome ? homeGoals > awayGoals : awayGoals > homeGoals
+      return [won ? "W" : "L"]
+    }).slice(-5)
+
+    return results.length === 5 ? { sequence: results.join(""), points: formPoints(results.join("")) } : null
+  } catch (error) {
+    console.warn("RECENT FORM ERROR", { teamId, error })
+    return null
+  }
 }
 
 function findProjectedRating(
@@ -138,15 +186,14 @@ console.log("API ERRORS:", data.errors)
         fetchTeamRating(item.teams.away.id, item.league.id, item.league.season || new Date().getUTCFullYear()),
       ])
     )
-    const projectedLineupEntries = await Promise.all(
-      selectedFixtures.map((item: Fixture) => fetchProjectedLineupRatings(
-        item.fixture.id,
-        item.teams.home.name,
-        item.teams.away.name,
-        item.teams.home.id,
-        item.teams.away.id,
-        item.league.season || new Date().getUTCFullYear(),
-      ))
+    const confirmedLineupEntries = await Promise.all(
+      selectedFixtures.map((item: Fixture) => fetchConfirmedLineupRatings(item.fixture.id))
+    )
+    const formEntries = await Promise.all(
+      selectedFixtures.flatMap((item: Fixture) => [
+        fetchRecentForm(item.teams.home.id),
+        fetchRecentForm(item.teams.away.id),
+      ])
     )
     const oddsEntries = access.isPro
       ? await Promise.all(selectedFixtures.map((item: Fixture) => fetchMatchOdds(item.fixture.id)))
@@ -157,14 +204,22 @@ console.log("API ERRORS:", data.errors)
         const fixtureId = item.fixture.id
         const homeRating = ratingEntries[index * 2] || teamRatings[item.teams.home.name] || 70
         const awayRating = ratingEntries[index * 2 + 1] || teamRatings[item.teams.away.name] || 70
-        const projectedLineups = projectedLineupEntries[index]
-        const lineupStatus = projectedLineups?.length
-          ? projectedLineups.every((lineup: { isProjected: boolean }) => lineup.isProjected) ? "projected" : "confirmed"
-          : "unavailable"
-        const homeProjectedRating = findProjectedRating(projectedLineups, item.teams.home.name)
-        const awayProjectedRating = findProjectedRating(projectedLineups, item.teams.away.name)
-        const homeLineupTotal = projectedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.home.name)?.total ?? null
-        const awayLineupTotal = projectedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.away.name)?.total ?? null
+        const confirmedLineups = confirmedLineupEntries[index]
+        const lineupStatus = confirmedLineups?.length ? "confirmed" : "awaiting"
+        const homeProjectedRating = findProjectedRating(confirmedLineups, item.teams.home.name)
+        const awayProjectedRating = findProjectedRating(confirmedLineups, item.teams.away.name)
+        const homeLineupTotal = confirmedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.home.name)?.total ?? null
+        const awayLineupTotal = confirmedLineups?.find((lineup: { team: string; total?: number }) => lineup.team === item.teams.away.name)?.total ?? null
+        const historicalSnapshot = getHistoricalRatingSnapshot(fixtureId)
+        const homeForm = formEntries[index * 2]
+        const awayForm = formEntries[index * 2 + 1]
+        const ratingPrediction = homeLineupTotal !== null && awayLineupTotal !== null
+          ? predictFromGap(homeLineupTotal, awayLineupTotal, 11, item.teams.home.name, item.teams.away.name)
+          : null
+        const formPrediction = homeForm && awayForm
+          ? predictFromGap(homeForm.points, awayForm.points, 3, item.teams.home.name, item.teams.away.name)
+          : null
+        const consensusSelection = ratingPrediction && ratingPrediction === formPrediction ? ratingPrediction : null
         const matchOdds = oddsEntries[index]
 
         const signalHomeRating = homeProjectedRating || homeRating
@@ -244,9 +299,19 @@ console.log("API ERRORS:", data.errors)
           awayProjectedRating,
           homeLineupTotal,
           awayLineupTotal,
-          projectedLineups,
+          projectedLineups: confirmedLineups,
           lineupStatus,
-          hasLineups: Boolean(projectedLineups?.length),
+          hasLineups: Boolean(confirmedLineups?.length),
+          ratingSource: historicalSnapshot?.sourceLabel || null,
+          ratingSourceUrl: historicalSnapshot?.sourceUrl || null,
+          ratingCapturedAt: historicalSnapshot?.capturedAt || null,
+          homeForm: homeForm?.sequence || null,
+          homeFormPoints: homeForm?.points ?? null,
+          awayForm: awayForm?.sequence || null,
+          awayFormPoints: awayForm?.points ?? null,
+          ratingPrediction,
+          formPrediction,
+          consensusSelection,
           combinedLineupTotals: null,
         }
       })
@@ -308,10 +373,14 @@ console.log("API ERRORS:", data.errors)
   }
 }
 
-async function fetchProjectedLineupRatings(fixtureId: number, homeName?: string, awayName?: string, homeTeamId?: number, awayTeamId?: number, season?: number) {
+async function fetchConfirmedLineupRatings(fixtureId: number) {
   try {
-    const lineups = await fetchLineups(fixtureId, { home: homeName, away: awayName, homeTeamId, awayTeamId, season })
-    const ratings = (lineups as ApiLineup[]).map((lineup) => {
+    const historicalSnapshot = getHistoricalRatingSnapshot(fixtureId)
+    if (historicalSnapshot) return historicalSnapshot.lineups
+
+    const lineups = await fetchLineups(fixtureId)
+    const confirmedLineups = lineups.filter((lineup) => !lineup.isProjected && (lineup.startXI?.length || 0) >= 11)
+    const ratings = (confirmedLineups as ApiLineup[]).map((lineup) => {
       const lineupRating = calculateLineupRating(lineup.startXI || [])
       return {
         team: lineup.team?.name || "Team",
@@ -332,7 +401,7 @@ async function fetchProjectedLineupRatings(fixtureId: number, homeName?: string,
 
     return ratings.length > 0 ? ratings : null
   } catch (error) {
-    console.error("PROJECTED LINEUP RATING ERROR", { fixtureId, error })
+    console.error("CONFIRMED LINEUP RATING ERROR", { fixtureId, error })
     return null
   }
 }

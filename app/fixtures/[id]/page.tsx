@@ -4,7 +4,9 @@ import { requireActiveSubscription } from "@/lib/requireSubscription"
 import { calculateMatchProbabilities } from "@/lib/matchProbability"
 import { calculateLineupRating } from "@/lib/calculateLineupRating"
 import { SaveBriefButton } from "@/components/SavedBriefs"
+import { LineupAlertButton } from "@/components/LineupAlertButton"
 import { fetchLineups } from "@/lib/fetchLineups"
+import { getHistoricalRatingSnapshot } from "@/lib/historicalRatingSnapshots"
 
 const API_URL = "https://v3.football.api-sports.io"
 
@@ -147,13 +149,7 @@ export default async function FixturePage({
     leagueId ? fetchTeamStats(awayId, leagueId, apiKey) : Promise.resolve(null),
     fetch(`${API_URL}/fixtures/headtohead?h2h=${homeId}-${awayId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 21600 } }).then((result) => result.json() as Promise<HeadToHeadResponse>).catch(() => null),
     fetch(`${API_URL}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<LiveStatisticResponse>).catch(() => null),
-    fetchLineups(fixtureId, {
-      home: homeName,
-      away: awayName,
-      homeTeamId: homeId,
-      awayTeamId: awayId,
-      season: fixture.league?.season || new Date().getUTCFullYear(),
-    }),
+    fetchLineups(fixtureId),
     fetch(`${API_URL}/fixtures/events?fixture=${fixtureId}`, { headers: { "x-apisports-key": apiKey }, next: { revalidate: 60 } }).then((result) => result.json() as Promise<EventsResponse>).catch(() => null),
   ])
   const homeTeamStats = homeStats
@@ -175,12 +171,15 @@ export default async function FixturePage({
   const homeLiveStats = liveStats.find((entry) => entry.team?.name === homeName)?.statistics || []
   const awayLiveStats = liveStats.find((entry) => entry.team?.name === awayName)?.statistics || []
   const liveStatTypes = Array.from(new Set([...homeLiveStats, ...awayLiveStats].map((stat) => stat.type).filter(Boolean)))
-  const lineups = lineupsResponse || []
-  const hasConfirmedLineups = lineups.length > 0 && lineups.every((lineup) => !lineup.isProjected)
+  const lineups = (lineupsResponse || []).filter((lineup) => !lineup.isProjected && (lineup.startXI?.length || 0) >= 11)
+  const historicalSnapshot = getHistoricalRatingSnapshot(fixtureId)
+  const hasConfirmedLineups = lineups.length > 0 || Boolean(historicalSnapshot)
   const homeLineup = lineups.find((lineup) => lineup.team?.name === homeName)
   const awayLineup = lineups.find((lineup) => lineup.team?.name === awayName)
-  const homeLineupTotal = homeLineup ? calculateLineupRating(homeLineup.startXI || []).total : null
-  const awayLineupTotal = awayLineup ? calculateLineupRating(awayLineup.startXI || []).total : null
+  const homeLineupTotal = historicalSnapshot?.lineups.find((lineup) => lineup.team === homeName)?.total
+    ?? (homeLineup ? calculateLineupRating(homeLineup.startXI || []).total : null)
+  const awayLineupTotal = historicalSnapshot?.lineups.find((lineup) => lineup.team === awayName)?.total
+    ?? (awayLineup ? calculateLineupRating(awayLineup.startXI || []).total : null)
   const strongerLineupTeam = homeLineupTotal !== null && awayLineupTotal !== null
     ? (homeLineupTotal > awayLineupTotal ? homeName : awayLineupTotal > homeLineupTotal ? awayName : null)
     : null
@@ -232,6 +231,7 @@ export default async function FixturePage({
             <Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-300/10" href={`/teams/${homeId}?league=${league || ""}`}>View {homeName}</Link>
             <Link className="rounded-full border border-cyan-200/30 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-300/10" href={`/teams/${awayId}?league=${league || ""}`}>View {awayName}</Link>
             <SaveBriefButton fixtureId={fixtureId} homeTeam={homeName} awayTeam={awayName} />
+            {fixture.fixture?.date && <LineupAlertButton fixtureId={fixtureId} homeTeam={homeName} awayTeam={awayName} kickoff={fixture.fixture.date} lineupsConfirmed={hasConfirmedLineups} />}
           </div>
         </header>
 
@@ -250,9 +250,12 @@ export default async function FixturePage({
             </div>
           </div>
           <p className="mt-6 text-center text-sm text-slate-300">
-            {strongerLineupTeam ? `${strongerLineupTeam} has the stronger lineup on paper.` : "Both lineups rate evenly on paper."}
+            {strongerLineupTeam ? `${strongerLineupTeam} has the stronger confirmed XI on paper.` : hasConfirmedLineups ? "Both confirmed XIs rate evenly on paper." : "Awaiting confirmed XIs from the match-data provider."}
           </p>
-          <p className="mt-3 border-t border-lime-300/10 pt-4 text-center text-xs text-slate-500">Sum of individual player ratings from the {hasConfirmedLineups ? "confirmed" : "projected"} starting XI. A simple strength read before the deeper stats below.</p>
+          <p className="mt-3 border-t border-lime-300/10 pt-4 text-center text-xs text-slate-500">
+            Sum of individual player ratings from the confirmed starting XI. No projected lineups are used in this comparison.
+            {historicalSnapshot ? ` ${historicalSnapshot.sourceLabel}, captured ${historicalSnapshot.capturedAt}.` : ""}
+          </p>
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-2">

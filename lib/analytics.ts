@@ -7,6 +7,8 @@ export type FunnelEvent =
   | "checkout_completed"
   | "subscription_active"
   | "subscription_canceled"
+  | "lineup_alert_subscribed"
+  | "lineup_alert_sent"
 
 export async function logEvent(eventName: FunnelEvent, userId?: string | null, metadata: Record<string, unknown> = {}) {
   if (!supabase) return

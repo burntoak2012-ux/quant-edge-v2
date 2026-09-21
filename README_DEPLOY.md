@@ -9,6 +9,7 @@ Getting this SaaS live — quick deploy checklist
 - Supabase: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (server-only; never use the anon key for billing writes)
 - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - Stripe price: `STRIPE_PRICE_ID`
+- Lineup alerts: `RESEND_API_KEY`, `LINEUP_ALERT_FROM` (a verified sender such as `Quant Edge <alerts@yourdomain.com>`), `CRON_SECRET`
 
 2) Database (Supabase)
 
@@ -16,6 +17,7 @@ Getting this SaaS live — quick deploy checklist
   ```
   psql "postgresql://<DB_USER>:<DB_PASS>@<DB_HOST>:<DB_PORT>/<DB_NAME>" -f db/migrations/001_create_billing_tables.sql
   psql "postgresql://<DB_USER>:<DB_PASS>@<DB_HOST>:<DB_PORT>/<DB_NAME>" -f db/seeds/001_seed_sample.sql
+  psql "postgresql://<DB_USER>:<DB_PASS>@<DB_HOST>:<DB_PORT>/<DB_NAME>" -f db/migrations/003_create_lineup_alerts.sql
   ```
 - Or use Supabase UI: SQL Editor → run migration and seed SQL.
 - Run `db/migrations/002_create_prediction_snapshots.sql` as well. This stores model probabilities and later actual results so calibration and ROI can be measured.

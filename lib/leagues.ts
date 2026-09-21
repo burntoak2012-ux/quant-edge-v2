@@ -6,6 +6,7 @@ export const LEAGUES = [
   { id: 61, name: "Ligue 1", country: "France" },
   { id: 2, name: "Champions League", country: "UEFA" },
   { id: 3, name: "Europa League", country: "UEFA" },
+  { id: 5, name: "UEFA Nations League", country: "UEFA" },
   { id: 848, name: "Conference League", country: "UEFA" },
   { id: 18, name: "AFC Champions League Two", country: "Asia" },
 ] as const

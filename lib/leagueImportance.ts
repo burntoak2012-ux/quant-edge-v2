@@ -7,8 +7,9 @@ const LEAGUE_IMPORTANCE: Record<number, number> = {
   140: 5, // La Liga (Spain)
   3: 6,   // UEFA Europa League
   61: 7,  // Ligue 1 (France)
-  848: 8, // UEFA Conference League
-  18: 9,  // AFC Champions League Two
+  5: 8,   // UEFA Nations League
+  848: 9, // UEFA Conference League
+  18: 10, // AFC Champions League Two
 }
 
 export function getLeagueImportance(leagueId: number) {

@@ -2,7 +2,7 @@
 
 import { useUser, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { FiCreditCard } from "react-icons/fi"
 import { LEAGUES } from "@/lib/leagues"
 import { getLeagueImportance } from "@/lib/leagueImportance"
@@ -47,8 +47,18 @@ type Match = {
   homeLineupTotal: number | null
   awayLineupTotal: number | null
   projectedLineups: Array<{ team: string; rating: number; formation: string | null; isProjected: boolean; players: Array<{ name: string; photo: string | null; position: string; grid: string | null; number: number | null; rating: number | null }> }> | null
-  lineupStatus: "confirmed" | "projected" | "unavailable"
+  lineupStatus: "confirmed" | "awaiting"
   hasLineups: boolean
+  ratingSource: string | null
+  ratingSourceUrl: string | null
+  ratingCapturedAt: string | null
+  homeForm: string | null
+  homeFormPoints: number | null
+  awayForm: string | null
+  awayFormPoints: number | null
+  ratingPrediction: string | null
+  formPrediction: string | null
+  consensusSelection: string | null
   combinedLineupTotals?: { combinedTotal: number } | null
   outcomeValues: Array<{ outcome: string; modelProbability: number; impliedProbability: number | null; odd: number | null; value: number | null }>
   bestValueMarket: { market: string; outcome: string; odd: number | null; valuePercent: number } | null
@@ -89,7 +99,9 @@ export default function Dashboard() {
     window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist))
   }, [watchlist])
 
-  async function loadMatches() {
+  const hasPendingLineups = matches.some((match) => !match.hasLineups && match.statusCode !== "FT")
+
+  const loadMatches = useCallback(async () => {
     setLoading(true)
     setError("")
 
@@ -116,21 +128,23 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedDate])
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => {
       void loadMatches()
     }, 0)
+
+    const intervalMs = hasPendingLineups ? 15_000 : 60_000
     const interval = window.setInterval(() => {
       void loadMatches()
-    }, 60_000)
+    }, intervalMs)
 
     return () => {
       window.clearTimeout(initialLoad)
       window.clearInterval(interval)
     }
-  }, [selectedDate])
+  }, [hasPendingLineups, loadMatches])
 
   function shiftDate(days: number) {
     const date = new Date(`${selectedDate}T12:00:00`)
@@ -361,7 +375,23 @@ export default function Dashboard() {
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-semibold text-white">{match.homeTeam} v {match.awayTeam}</span>
-                      {strongerTeam && <span className="mt-0.5 block text-[11px] text-lime-300">Stronger lineup: {strongerTeam}</span>}
+                      {match.homeLineupTotal !== null && match.awayLineupTotal !== null ? (
+                        <>
+                          <span className="mt-0.5 block text-[11px] text-lime-300">
+                            XI ratings: {match.homeLineupTotal} - {match.awayLineupTotal}{strongerTeam ? ` · ${strongerTeam} stronger` : " · Level"}
+                            {match.ratingSource ? ` · ${match.ratingSource}` : ""}
+                          </span>
+                          <span className={`mt-0.5 block text-[11px] font-semibold ${match.consensusSelection ? "text-cyan-300" : "text-slate-500"}`}>
+                            {match.ratingPrediction && match.formPrediction
+                              ? match.consensusSelection
+                                ? `Selection: ${match.consensusSelection}`
+                                : "No bet · ratings and form disagree"
+                              : "Selection pending five-match form"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="mt-0.5 block text-[11px] text-slate-500">Awaiting confirmed XI</span>
+                      )}
                     </span>
                     <span className="shrink-0 text-xs text-slate-400">{kickoffLabel}</span>
                   </Link>

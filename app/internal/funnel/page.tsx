@@ -15,6 +15,8 @@ const FUNNEL_STEPS = [
   { key: "checkout_completed", label: "Checkout completed" },
   { key: "subscription_active", label: "Subscription active" },
   { key: "subscription_canceled", label: "Subscription canceled" },
+  { key: "lineup_alert_subscribed", label: "Lineup alert subscribed" },
+  { key: "lineup_alert_sent", label: "Lineup alert sent" },
 ] as const
 
 export default async function InternalFunnelPage() {
