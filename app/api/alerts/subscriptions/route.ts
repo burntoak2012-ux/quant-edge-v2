@@ -68,7 +68,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ subscribed: true })
   } catch (error) {
     console.error("LINEUP ALERT SUBSCRIPTION ERROR", error)
-    return NextResponse.json({ error: "Unable to save lineup alert on the server" }, { status: 500 })
+    const detail = error instanceof Error ? error.message : "Unknown server error"
+    return NextResponse.json({ error: `Unable to save lineup alert: ${detail}` }, { status: 500 })
   }
 }
 
