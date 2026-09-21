@@ -7,6 +7,7 @@ const API_URL = "https://v3.football.api-sports.io"
 
 type Standing = {
   rank: number
+  group?: string
   team: { id: number; name: string; logo?: string }
   points: number
   goalsDiff: number
@@ -39,8 +40,9 @@ type LeaderboardEntry = {
 
 type LeaderboardResponse = { response?: LeaderboardEntry[] }
 
-async function fetchSeasonData<T>(endpoint: string, apiKey: string, currentSeason: number) {
-  for (const season of [currentSeason, SUPPORTED_BASELINE_SEASON]) {
+async function fetchSeasonData<T>(endpoint: string, apiKey: string, currentSeason: number, allowBaselineFallback = true) {
+  const seasons = allowBaselineFallback ? [currentSeason, SUPPORTED_BASELINE_SEASON] : [currentSeason]
+  for (const season of seasons) {
     if (season === SUPPORTED_BASELINE_SEASON && currentSeason === SUPPORTED_BASELINE_SEASON) continue
     const response = await fetch(`${API_URL}/${endpoint}&season=${season}`, {
       headers: { "x-apisports-key": apiKey },
@@ -91,9 +93,10 @@ export default async function LeaguePage({
   if (!league || !apiKey) notFound()
 
   const season = new Date().getUTCFullYear()
+  const allowBaselineFallback = leagueId !== 5
   const [standingsResult, fixturesResult] = await Promise.all([
-    fetchSeasonData<LeagueResponse>(`standings?league=${leagueId}`, apiKey, season),
-    fetchSeasonData<FixturesResponse>(`fixtures?league=${leagueId}`, apiKey, season),
+    fetchSeasonData<LeagueResponse>(`standings?league=${leagueId}`, apiKey, season, allowBaselineFallback),
+    fetchSeasonData<FixturesResponse>(`fixtures?league=${leagueId}`, apiKey, season, allowBaselineFallback),
   ])
   const leaderboardTypes = [
     ["Top scorers", "players/topscorers"],
@@ -101,10 +104,11 @@ export default async function LeaguePage({
     ["Most yellow cards", "players/topyellowcards"],
   ] as const
   const leaderboardResults = await Promise.all(
-    leaderboardTypes.map(async ([, endpoint]) => fetchSeasonData<LeaderboardResponse>(`${endpoint}?league=${leagueId}`, apiKey, season))
+    leaderboardTypes.map(async ([, endpoint]) => fetchSeasonData<LeaderboardResponse>(`${endpoint}?league=${leagueId}`, apiKey, season, allowBaselineFallback))
   )
 
-  const standings = standingsResult?.data.response?.[0]?.league?.standings?.[0] || []
+  const standingGroups = standingsResult?.data.response?.[0]?.league?.standings || []
+  const standings = standingGroups.flat()
   const fixtures = fixturesResult?.data.response || []
   const displayedSeason = standingsResult?.season || fixturesResult?.season || SUPPORTED_BASELINE_SEASON
   const recentFixtures = fixtures
@@ -122,7 +126,8 @@ export default async function LeaguePage({
   const completedFixtures = fixtures.filter((fixture) => fixture.goals?.home !== null && fixture.goals?.home !== undefined && fixture.goals?.away !== null && fixture.goals?.away !== undefined)
   const competitionGoals = completedFixtures.reduce((total, fixture) => total + (fixture.goals?.home || 0) + (fixture.goals?.away || 0), 0)
   const topTeam = standings[0]
-  const topScorer = leaderboardCards[0].entries[0]?.player?.name
+  const hasStarted = completedFixtures.length > 0
+  const topScorer = hasStarted ? leaderboardCards[0].entries[0]?.player?.name : undefined
   const avgGoals = completedFixtures.length > 0 ? competitionGoals / completedFixtures.length : 0
   const nextFixture = upcomingFixtures[0]
     ? `${upcomingFixtures[0].teams.home.name} vs ${upcomingFixtures[0].teams.away.name}`
@@ -155,28 +160,33 @@ export default async function LeaguePage({
               </div>
               <span className="text-xs text-slate-500">{standings.length} teams</span>
             </div>
-            <div className="qe-panel mt-5 overflow-x-auto rounded-2xl border">
-              {standings.length > 0 ? (
-                <table className="w-full min-w-[560px] text-left text-sm">
-                  <thead className="bg-slate-900 text-xs uppercase tracking-[0.12em] text-slate-500">
-                    <tr><th className="px-3 py-3">#</th><th className="px-3 py-3">Team</th><th className="px-3 py-3">P</th><th className="px-3 py-3">W</th><th className="px-3 py-3">D</th><th className="px-3 py-3">L</th><th className="px-3 py-3">GD</th><th className="px-3 py-3">Pts</th></tr>
-                  </thead>
-                  <tbody>
-                    {standings.map((entry) => (
-                      <tr className="border-t border-slate-800" key={entry.team.id}>
-                        <td className="px-3 py-3 text-slate-500">{entry.rank}</td>
-                        <td className="px-3 py-3"><Link className="font-semibold text-cyan-200 hover:text-cyan-100" href={`/teams/${entry.team.id}?league=${leagueId}`}>{entry.team.name}</Link></td>
-                        <td className="px-3 py-3">{entry.all?.played ?? "-"}</td>
-                        <td className="px-3 py-3">{entry.all?.win ?? "-"}</td>
-                        <td className="px-3 py-3">{entry.all?.draw ?? "-"}</td>
-                        <td className="px-3 py-3">{entry.all?.lose ?? "-"}</td>
-                        <td className="px-3 py-3">{entry.goalsDiff > 0 ? `+${entry.goalsDiff}` : entry.goalsDiff}</td>
-                        <td className="px-3 py-3 font-bold text-white">{entry.points}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : <p className="p-5 text-sm text-slate-400">Standings are unavailable for this competition.</p>}
+            <div className="mt-5 space-y-4">
+              {standingGroups.length > 0 ? standingGroups.map((group, groupIndex) => (
+                <div className="qe-panel overflow-x-auto rounded-2xl border" key={`group-${groupIndex}`}>
+                  <p className="border-b border-slate-800 bg-slate-900 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
+                    {group[0]?.group || `Group ${groupIndex + 1}`}
+                  </p>
+                  <table className="w-full min-w-[560px] text-left text-sm">
+                    <thead className="bg-slate-900/70 text-xs uppercase tracking-[0.12em] text-slate-500">
+                      <tr><th className="px-3 py-3">#</th><th className="px-3 py-3">Team</th><th className="px-3 py-3">P</th><th className="px-3 py-3">W</th><th className="px-3 py-3">D</th><th className="px-3 py-3">L</th><th className="px-3 py-3">GD</th><th className="px-3 py-3">Pts</th></tr>
+                    </thead>
+                    <tbody>
+                      {group.map((entry) => (
+                        <tr className="border-t border-slate-800" key={entry.team.id}>
+                          <td className="px-3 py-3 text-slate-500">{entry.rank}</td>
+                          <td className="px-3 py-3"><Link className="font-semibold text-cyan-200 hover:text-cyan-100" href={`/teams/${entry.team.id}?league=${leagueId}`}>{entry.team.name}</Link></td>
+                          <td className="px-3 py-3">{entry.all?.played ?? "-"}</td>
+                          <td className="px-3 py-3">{entry.all?.win ?? "-"}</td>
+                          <td className="px-3 py-3">{entry.all?.draw ?? "-"}</td>
+                          <td className="px-3 py-3">{entry.all?.lose ?? "-"}</td>
+                          <td className="px-3 py-3">{entry.goalsDiff > 0 ? `+${entry.goalsDiff}` : entry.goalsDiff}</td>
+                          <td className="px-3 py-3 font-bold text-white">{entry.points}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )) : <div className="qe-panel rounded-2xl border p-5 text-sm text-slate-400">The Nations League season has not started. Group standings will appear after the first fixtures.</div>}
             </div>
           </section>
 
@@ -242,7 +252,7 @@ export default async function LeaguePage({
           </section>
         </div>
 
-        <section className="mt-10 border-t border-slate-800 pt-8">
+        {hasStarted ? <section className="mt-10 border-t border-slate-800 pt-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Competition snapshot</p>
           <h2 className="mt-2 text-2xl font-bold">The shape of this season</h2>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -251,9 +261,9 @@ export default async function LeaguePage({
             <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Completed fixtures</p><p className="mt-2 text-2xl font-semibold text-white">{completedFixtures.length}</p><p className="mt-2 text-xs text-slate-400">of {fixtures.length} listed</p></div>
             <div className="qe-panel rounded-2xl border p-4"><p className="text-xs uppercase tracking-[0.15em] text-slate-500">Goals / match</p><p className="mt-2 text-2xl font-semibold text-lime-200">{completedFixtures.length ? (competitionGoals / completedFixtures.length).toFixed(2) : "-"}</p><p className="mt-2 text-xs text-slate-400">completed matches</p></div>
           </div>
-        </section>
+        </section> : <section className="mt-10 border-t border-slate-800 pt-8"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300">Pre-season</p><h2 className="mt-2 text-2xl font-bold">Charts will appear after kickoff</h2><p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">Scorers, assists, discipline and goals-per-match charts are hidden until completed competition fixtures produce real data.</p></section>}
 
-        <section className="mt-10 border-t border-slate-800 pt-8">
+        {hasStarted && <section className="mt-10 border-t border-slate-800 pt-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Leaderboards</p>
           <h2 className="mt-2 text-2xl font-bold">Season leaders</h2>
           <p className="mt-2 text-sm text-slate-400">Goals, assists, and discipline leaders from the {displayedSeason} data set.</p>
@@ -286,7 +296,7 @@ export default async function LeaguePage({
               </div>
             ))}
           </div>
-        </section>
+        </section>}
       </div>
     </main>
   )
