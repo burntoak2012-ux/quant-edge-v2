@@ -1,7 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 
-const PROTECTED_PREFIXES = ["/app", "/account", "/internal", "/fixtures", "/leagues", "/teams", "/players", "/api/secure"]
+const PROTECTED_PREFIXES = ["/app", "/account", "/internal", "/fixtures", "/leagues", "/teams", "/players", "/api/secure", "/api/alerts"]
 
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl
@@ -22,6 +22,7 @@ export const config = {
     "/teams/:path*",
     "/players/:path*",
     "/api/secure/:path*",
+    "/api/alerts/:path*",
     "/api/matches",
     "/api/stripe/create-session",
     "/api/stripe/portal",
