@@ -37,7 +37,7 @@ Getting this SaaS live — quick deploy checklist
 - Create a free scheduled job at `cron-job.org` (or an equivalent scheduler).
 - Request URL: `https://quantedgefootball.com/api/alerts/check`
 - Schedule: every 5 minutes.
-- Add request header `Authorization: Bearer <your CRON_SECRET>` using the same `CRON_SECRET` value configured in Vercel.
+- Add request header `X-Cron-Secret: <your CRON_SECRET>` using the same `CRON_SECRET` value configured in Vercel.
 - Use a GET request. A successful empty check returns JSON with `checked`, `fixtures`, and `sent` counts.
 
 6) Deploy (Vercel recommended)
